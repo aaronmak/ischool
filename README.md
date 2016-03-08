@@ -1,1 +1,1 @@
-# ischool
+# iSchool

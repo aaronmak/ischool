@@ -1,0 +1,22 @@
+{
+  "name": "iSchool",
+  "homepage": "https://github.com/aaronmak/ischool",
+  "authors": [
+    "Aaron Mak Kang Sheng <aaronmakks@gmail.com>"
+  ],
+  "description": "",
+  "main": "",
+  "moduleType": [
+    "globals",
+    "node"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
