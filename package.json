@@ -1,0 +1,31 @@
+{
+  "name": "ischool",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/aaronmak/ischool.git"
+  },
+  "author": "Aaron Mak",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/aaronmak/ischool/issues"
+  },
+  "homepage": "https://github.com/aaronmak/ischool",
+  "devDependencies": {
+    "grunt-contrib-sass": "^1.0.0",
+    "grunt": "^0.4.5",
+    "grunt-contrib-watch": "^0.6.1",
+    "matchdep": "^1.0.1",
+    "grunt-open": "^0.2.3",
+    "grunt-contrib-uglify": "^1.0.0",
+    "grunt-contrib-concat": "^1.0.0",
+    "grunt-contrib-jshint": "^1.0.0",
+    "grunt-contrib-qunit": "^1.0.1",
+    "grunt-contrib-cssmin": "^1.0.0"
+  }
+}
