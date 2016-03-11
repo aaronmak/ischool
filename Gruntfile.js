@@ -6,19 +6,41 @@
 
 module.exports = function (grunt) {
     'use strict';
+    require('es6-promise').polyfill();
     // load all grunt tasks
     var matchdep = require('matchdep');
     matchdep.filterDev('grunt-*').forEach(grunt.loadNpmTasks);
 
     grunt.initConfig({
       pkg: grunt.file.readJSON('package.json'),
+      bower_concat: {
+        all: {
+          dest: {
+            'js': 'src/js/_bower.js',
+            'css': 'src/css/_bower.css'
+          },
+          exclude: [
+
+          ],
+          dependencies: {
+          },
+          bowerOptions: {
+            relative: false
+          }
+        }
+      },
       concat: {
         options: {
           separator: ';'
         },
-        dist: {
-          src: ['src/components/jquery/dist/jquery.js'],
-          dest: 'dist/<%= pkg.name %>.js'
+        js: {
+          // src: ['src/components/jquery/dist/jquery.js','src/components/leaflet/dist/leaflet.js',
+          src: ['src/js/_bower.js', 'src/js/*.js'],
+          dest: 'dist/js/<%= pkg.name %>.js'
+        },
+        css: {
+          src: ['src/css/_bower.css','src/css/*.css'],
+          dest: 'dist/css/<%=pkg.name %>.css'
         }
       },
       uglify: {
@@ -27,12 +49,12 @@ module.exports = function (grunt) {
         },
         dist: {
           files: {
-            'dist/<%= pkg.name %>.min.js': ['<%= concat.dist.dest %>']
+            'dist/js/<%= pkg.name %>.min.js': ['<%= concat.js.dest %>']
           }
         }
       },
       jshint: {
-        files: ['Gruntfile.js', 'src/js/*.js', 'test/**/*.js'],
+        files: ['Gruntfile.js', 'src/js/*.js', 'test/**/*.js', '!src/**/_bower.js'],
         options: {
           // options here to override JSHint defaults
           globals: {
@@ -49,7 +71,7 @@ module.exports = function (grunt) {
             expand: true,
             cwd: 'src/scss',
             src: ['**/*.scss'],
-            dest: 'dist/css',
+            dest: 'src/css',
             ext: '.css'
           }]
         }
@@ -65,13 +87,63 @@ module.exports = function (grunt) {
           }]
         }
       },
+      postcss: {
+        options: {
+          map: true,
+          processors: [
+            require('autoprefixer')({
+              browsers: ['last 2 versions']
+            })
+          ]
+        },
+        dist: {
+          src: ['dist/css/**/*.css', '!dist/css/**/*min.css']
+        }
+      },
+      copy: {
+         main: {
+           expand: true,
+           cwd: 'src',
+           src: ['**', '!css/**', '!js/**', '!scss/**', '!components/**'],
+           dest: 'dist/'
+         }
+      },
+      browserSync: {
+        dev: {
+          options:  {
+            server: 'dist',
+            background: true
+          }
+        }
+      },
+      bsReload: {
+        css: {
+          reload: "dist/css/ischool.min.css"
+        },
+        all: {
+          reload: true
+        }
+      },
       watch: {
-        files: ['<%= jshint.files %>'],
-        tasks: ['jshint']
+        options: {
+          spawn: false
+        },
+        sass: {
+          files: ['<%= sass.dist.files[0].src %>'],
+          tasks: ['sass','concat:css','postcss:dist', 'cssmin', 'bsReload:css']
+        },
+        js: {
+          files: ['<%= jshint.files %>'],
+          tasks: ['jshint','concat:js','uglify']
+        },
+        html: {
+          files: 'src/*.html',
+          tasks: ['copy', 'bsReload:all']
+        }
       }
     });
 
     grunt.registerTask('test', ['jshint']);
-
-    grunt.registerTask('default', ['sass','cssmin','jshint', 'concat', 'uglify']);
+    // Concat bower components, convert scss to css, concat css, autoprefix css, minify css, lint js, concat js, minify js, copy remaining files over, and watch
+    grunt.registerTask('default', ['bower_concat','sass','concat:css','postcss:dist','cssmin','jshint', 'concat:js', 'uglify', 'copy','browserSync', 'watch']);
 };
