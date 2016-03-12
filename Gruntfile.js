@@ -31,7 +31,7 @@ module.exports = function (grunt) {
       },
       concat: {
         options: {
-          separator: ';'
+          // separator: ';'
         },
         js: {
           // src: ['src/components/jquery/dist/jquery.js','src/components/leaflet/dist/leaflet.js',
@@ -120,6 +120,9 @@ module.exports = function (grunt) {
         css: {
           reload: "dist/css/ischool.min.css"
         },
+        js: {
+          reload: "dist/js/ischool.min.js"
+        },
         all: {
           reload: true
         }
@@ -134,7 +137,7 @@ module.exports = function (grunt) {
         },
         js: {
           files: ['<%= jshint.files %>'],
-          tasks: ['jshint','concat:js','uglify']
+          tasks: ['jshint','concat:js','uglify','bsReload:js']
         },
         html: {
           files: 'src/*.html',
