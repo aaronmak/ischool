@@ -23,6 +23,8 @@ module.exports = function (grunt) {
 
           ],
           dependencies: {
+            'jquerymy' : ['sugar','jquery'],
+            'jquery' : 'sugar'
           },
           bowerOptions: {
             relative: false
@@ -33,11 +35,11 @@ module.exports = function (grunt) {
         options: {
           // separator: ';'
         },
-        js: {
-          // src: ['src/components/jquery/dist/jquery.js','src/components/leaflet/dist/leaflet.js',
-          src: ['src/js/_bower.js', 'src/js/*.js'],
-          dest: 'dist/js/<%= pkg.name %>.js'
-        },
+        // js: {
+        //   // src: ['src/components/jquery/dist/jquery.js','src/components/leaflet/dist/leaflet.js',
+        //   src: ['src/js/_bower.js', 'src/js/*.js'],
+        //   dest: 'dist/js/<%= pkg.name %>.js'
+        // },
         css: {
           src: ['src/css/_bower.css','src/css/*.css'],
           dest: 'dist/css/<%=pkg.name %>.css'
@@ -49,7 +51,8 @@ module.exports = function (grunt) {
         },
         dist: {
           files: {
-            'dist/js/<%= pkg.name %>.min.js': ['<%= concat.js.dest %>']
+            'dist/js/_bower.min.js': 'src/js/_bower.js',
+            'dist/js/main.min.js': 'src/js/main.js'
           }
         }
       },
@@ -93,7 +96,8 @@ module.exports = function (grunt) {
           processors: [
             require('autoprefixer')({
               browsers: ['last 2 versions']
-            })
+            }),
+            require('cssnano')() // minify result
           ]
         },
         dist: {
@@ -121,7 +125,7 @@ module.exports = function (grunt) {
           reload: "dist/css/ischool.min.css"
         },
         js: {
-          reload: "dist/js/ischool.min.js"
+          reload: ["dist/js/main.min.js","dist/js/_bower.min.js"]
         },
         all: {
           reload: true
@@ -137,7 +141,7 @@ module.exports = function (grunt) {
         },
         js: {
           files: ['<%= jshint.files %>'],
-          tasks: ['jshint','concat:js','uglify','bsReload:js']
+          tasks: ['jshint','uglify','bsReload:js']
         },
         html: {
           files: 'src/*.html',
@@ -148,5 +152,5 @@ module.exports = function (grunt) {
 
     grunt.registerTask('test', ['jshint']);
     // Concat bower components, convert scss to css, concat css, autoprefix css, minify css, lint js, concat js, minify js, copy remaining files over, and watch
-    grunt.registerTask('default', ['bower_concat','sass','concat:css','postcss:dist','cssmin','jshint', 'concat:js', 'uglify', 'copy','browserSync', 'watch']);
+    grunt.registerTask('default', ['bower_concat','sass','concat:css','postcss:dist','jshint', 'uglify', 'copy','browserSync', 'watch']);
 };

@@ -66,3 +66,93 @@ L.control.zoom({
 // }).addTo(map);
 
 L.control.scale({options: {position: 'bottomright', maxWidth: 100, metric: true, imperial: false, updateWhenIdle: false}}).addTo(map);
+
+var schPref = {};
+var manifest = {
+  data: {acadEx: 0, sportsProg: 0, artsProg:0, distCar:0, distPubTrans:0, schGend:0},
+  init: function($node, form) {
+    $node.html(
+      '<h2>What your ideal school needs</h2>'+
+      '<label for="acadEx">Academic Excellence</label>'+
+      '<div class="slider" id="acadEx"></div>'+
+      '<label for="sportsProg">Sports Programs</label>'+
+      '<div class="slider" id="sportsProg"></div>'+
+      '<label for="artsProg">Arts Programs</label>'+
+      '<div class="slider" id="artsProg"></div>'+
+      '<label for="distCar">Proximity to Home by Car</label>'+
+      '<div class="slider" id="distCar"></div>'+
+      '<label for="distPubTrans">Proximity to Home by Public Transport</label>'+
+      '<div class="slider" id="distPubTrans"></div>'+
+      '<label for="schGend">School Gender</label>'+
+      '<div class="slider" id="schGend"></div>'+
+      '<span id="sumPref"></span>'
+    );
+  },
+  ui:{
+    "#acadEx": {
+      bind: "acadEx",
+      init: function ($node, form) {
+				$node.slider({
+					min: 0, max: 100
+				});
+			}
+    },
+    "#sportsProg": {
+      bind: "sportsProg",
+      init: function ($node, form) {
+				$node.slider({
+					min: 0, max: 100
+				});
+			}
+    },
+    "#artsProg": {
+      bind: "artsProg",
+      init: function ($node, form) {
+				$node.slider({
+					min: 0, max: 100
+				});
+			}
+    },
+    "#distCar": {
+      bind: "distCar",
+      init: function ($node, form) {
+				$node.slider({
+					min: 0, max: 100
+				});
+			}
+    },
+    "#distPubTrans": {
+      bind: "distPubTrans",
+      init: function ($node, form) {
+				$node.slider({
+					min: 0, max: 100
+				});
+			}
+    },
+    "#schGend": {
+      bind: "schGend",
+      init: function ($node, form) {
+				$node.slider({
+					min: 0, max: 100
+				});
+			}
+    },
+    "#sumPref": {
+      bind: function(data) {
+        var sum = 0;
+        for (var pref in data) {
+          sum += data[pref];
+        }
+        return sum;
+        // var acadEx = parseInt(data.acadEx,10);
+        // var sportProg = parseInt(data.sportProg,10);
+        // console.log(this.data.sportProg);
+        // return this.data.sportProg;
+      },
+      watch: "#schGend,#distPubTrans,#distCar,#artsProg,#sportsProg,#acadEx"
+    }
+  }
+};
+
+
+$("#schPrefForm").my(manifest, schPref);

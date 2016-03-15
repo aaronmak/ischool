@@ -18,5 +18,15 @@
     "bower_components",
     "test",
     "tests"
-  ]
+  ],
+  "dependencies": {
+    "jquerymy": "^1.2.4",
+    "normalize-css": "^3.0.3",
+    "skeleton": "^2.0.4",
+    "jquery": "^2.2.1",
+    "jquery-ui-slider": "*"
+  },
+  "resolutions": {
+    "jquery": "~1.11"
+  }
 }
