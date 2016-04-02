@@ -25,7 +25,8 @@
     "skeleton": "^2.0.4",
     "jquery": "^2.2.1",
     "jquery-ui-slider": "*",
-    "sidebar-v2": "^0.3.0"
+    "sidebar-v2": "^0.3.0",
+    "nouislider": "^8.3.0"
   },
   "resolutions": {
     "jquery": "~2.2.2"

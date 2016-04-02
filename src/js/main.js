@@ -214,4 +214,20 @@ L.control.scale({options: {position: 'bottomright', maxWidth: 100, metric: true,
 //
 // $("#schPrefForm").my(manifest, schPref);
 
-var sidebar = L.control.sidebar('sidebar-control').addTo(map);
+var sidebar = L.control.sidebar('sidebar-control', {
+  position: 'right'
+});
+
+map.addControl(sidebar);
+
+var slider1 = document.getElementById('slider1');
+
+noUiSlider.create(slider1, {
+  start: 4,
+  step: 1,
+  behaviour: "tap",
+  range: {
+    'min': 1,
+    'max': 7
+  }
+});
