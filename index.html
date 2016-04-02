@@ -11,9 +11,10 @@
         <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
         <link rel="apple-touch-icon" href="apple-touch-icon.png">
         <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" />
         <link rel="stylesheet" href="/css/ischool.css">
-        <script src="/js/_bower.min.js"></script>
         <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
+        <script src="/js/_bower.min.js"></script>
         <!--[if lt IE 9]>
             <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
             <script>window.html5 || document.write('<script src="js/vendor/html5shiv.js"><\/script>')</script>
@@ -23,32 +24,76 @@
         <!--[if lt IE 8]>
             <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
-        <div class="row">
-          <div class="nine columns map-container">
-            <div id="map"></div>
-          </div>
-          <div class="three columns sidebar-container">
-            <div id="sidebar">
-              <h1>iSchool</h1>
-              <form action="" id="schPrefForm">
-                <!-- <h2>What your ideal school needs</h2>
-                <label for="">Academic Excellence</label>
-                <div class="slider" id="acadEx"></div>
-                <label for="">Sports Programs</label>
-                <div class="slider" id="sportsProg"></div>
-                <label for="">Arts Programs</label>
-                <div class="slider" id="artsProg"></div>
-                <label for="">Proximity to Home by Car</label>
-                <div class="slider" id="distCar"></div>
-                <label for="">Proximity to Home by Public Transport</label>
-                <div class="slider" id="distPubTrans"></div>
-                <label for="">School Gender</label>
-                <div class="slider" id="schGend"></div> -->
-              </form>
-              <form action="" id="form"></form>
+        <!-- <div class="row"> -->
+          <!-- <div class="nine columns map-container"> -->
+            <div id="sidebar-control" class="sidebar collapsed">
+
+              <div class="sidebar-tabs">
+                  <ul role="tablist">
+                      <li><a href="#home" role="tab"><i class="fa fa-bars"></i></a></li>
+                      <li><a href="#profile" role="tab"><i class="fa fa-user"></i></a></li>
+                      <li class="disabled"><a href="#messages" role="tab"><i class="fa fa-envelope"></i></a></li>
+                  </ul>
+
+                  <ul role="tablist">
+                      <li><a href="#settings" role="tab"><i class="fa fa-gear"></i></a></li>
+                  </ul>
+              </div>
+
+              <!-- Tab panes -->
+              <div class="sidebar-content">
+                  <div class="sidebar-pane" id="home">
+                      <h1 class="sidebar-header">
+                          <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
+                      </h1>
+
+                      <p>A responsive sidebar for mapping libraries like <a href="http://leafletjs.com/">Leaflet</a> or <a href="http://openlayers.org/">OpenLayers</a>.</p>
+
+                      <p class="lorem">Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.</p>
+
+                      <p class="lorem">Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.</p>
+
+                      <p class="lorem">Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.</p>
+
+                      <p class="lorem">Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.</p>
+                  </div>
+
+                  <div class="sidebar-pane" id="profile">
+                      <h1 class="sidebar-header">Profile<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                  </div>
+
+                  <div class="sidebar-pane" id="messages">
+                      <h1 class="sidebar-header">Messages<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                  </div>
+
+                  <div class="sidebar-pane" id="settings">
+                      <h1 class="sidebar-header">Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                  </div>
+                </div>
             </div>
+            <div id="map" class="sidebar-map"></div>
+          <!-- </div> -->
+        <!-- <div class="three columns sidebar-container">
+          <div id="sidebar">
+            <h1>iSchool</h1>
+            <form action="" id="schPrefForm">
+              <h2>What your ideal school needs</h2>
+              <label for="">Academic Excellence</label>
+              <div class="slider" id="acadEx"></div>
+              <label for="">Sports Programs</label>
+              <div class="slider" id="sportsProg"></div>
+              <label for="">Arts Programs</label>
+              <div class="slider" id="artsProg"></div>
+              <label for="">Proximity to Home by Car</label>
+              <div class="slider" id="distCar"></div>
+              <label for="">Proximity to Home by Public Transport</label>
+              <div class="slider" id="distPubTrans"></div>
+              <label for="">School Gender</label>
+              <div class="slider" id="schGend"></div>
+            </form>
+            <form action="" id="form"></form>
           </div>
-        </div>
+        </div> -->
         <!-- Google Analytics: change UA-XXXXX-X to be your site's ID. -->
         <script src="/js/main.min.js"></script>
         <script>
