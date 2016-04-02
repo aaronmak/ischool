@@ -3,6 +3,17 @@ function toTitleCase(str)
     return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
 }
 
+function cloneObject(obj) {
+    if (obj === null || typeof obj !== 'object') {
+        return obj;
+    }
+    var temp = obj.constructor(); // give temp the original obj's constructor
+    for (var key in obj) {
+        temp[key] = cloneObject(obj[key]);
+    }
+    return temp;
+}
+
 var map = L.map('map', {
     zoomControl:false, maxZoom:17, minZoom:11
 }).fitBounds([[1.470774832084756, 104.08848306516336],[1.158698700635265,103.60543572198932]]);
@@ -67,6 +78,39 @@ L.control.zoom({
 
 L.control.scale({options: {position: 'bottomright', maxWidth: 100, metric: true, imperial: false, updateWhenIdle: false}}).addTo(map);
 
+
+var sliderTooltip = function(event, ui) {
+    var curValue = ui.value || 0;
+    var tooltip = '<div class="tooltip"><div class="tooltip-inner">' + curValue + '</div><div class="tooltip-arrow"></div></div>';
+    $('.ui-slider-handle').html(tooltip);
+};
+
+var sliderTooltip1 = function(event, ui) {
+    var curValue = ui.value || 0;
+    var tooltip = '<div class="tooltip"><div class="tooltip-inner">' + curValue + '</div><div class="tooltip-arrow"></div></div>';
+    $('.ui-slider-handle').html(tooltip);
+};
+var sliderTooltip2 = function(event, ui) {
+    var curValue = ui.value || 0;
+    var tooltip = '<div class="tooltip"><div class="tooltip-inner">' + curValue + '</div><div class="tooltip-arrow"></div></div>';
+    $('.ui-slider-handle').html(tooltip);
+};
+var sliderTooltip3 = function(event, ui) {
+    var curValue = ui.value || 0;
+    var tooltip = '<div class="tooltip"><div class="tooltip-inner">' + curValue + '</div><div class="tooltip-arrow"></div></div>';
+    $('.ui-slider-handle').html(tooltip);
+};
+var sliderTooltip4 = function(event, ui) {
+    var curValue = ui.value || 0;
+    var tooltip = '<div class="tooltip"><div class="tooltip-inner">' + curValue + '</div><div class="tooltip-arrow"></div></div>';
+    $('.ui-slider-handle').html(tooltip);
+};
+var sliderTooltip5 = function(event, ui) {
+    var curValue = ui.value || 0;
+    var tooltip = '<div class="tooltip"><div class="tooltip-inner">' + curValue + '</div><div class="tooltip-arrow"></div></div>';
+    $('.ui-slider-handle').html(tooltip);
+};
+
 var schPref = {};
 var manifest = {
   data: {acadEx: 0, sportsProg: 0, artsProg:0, distCar:0, distPubTrans:0, schGend:0},
@@ -93,7 +137,10 @@ var manifest = {
       bind: "acadEx",
       init: function ($node, form) {
 				$node.slider({
-					min: 0, max: 100
+					min: 0,
+          max: 100,
+          create: sliderTooltip1,
+          slide: sliderTooltip1
 				});
 			}
     },
@@ -101,7 +148,10 @@ var manifest = {
       bind: "sportsProg",
       init: function ($node, form) {
 				$node.slider({
-					min: 0, max: 100
+					min: 0,
+          max: 100,
+          create: sliderTooltip2,
+          slide: sliderTooltip2
 				});
 			}
     },
@@ -109,7 +159,10 @@ var manifest = {
       bind: "artsProg",
       init: function ($node, form) {
 				$node.slider({
-					min: 0, max: 100
+					min: 0,
+          max: 100,
+          create: sliderTooltip,
+          slide: sliderTooltip
 				});
 			}
     },
@@ -117,7 +170,10 @@ var manifest = {
       bind: "distCar",
       init: function ($node, form) {
 				$node.slider({
-					min: 0, max: 100
+					min: 0,
+          max: 100,
+          create: sliderTooltip,
+          slide: sliderTooltip
 				});
 			}
     },
@@ -125,7 +181,10 @@ var manifest = {
       bind: "distPubTrans",
       init: function ($node, form) {
 				$node.slider({
-					min: 0, max: 100
+					min: 0,
+          max: 100,
+          create: sliderTooltip,
+          slide: sliderTooltip
 				});
 			}
     },
@@ -133,7 +192,10 @@ var manifest = {
       bind: "schGend",
       init: function ($node, form) {
 				$node.slider({
-					min: 0, max: 100
+					min: 0,
+          max: 100,
+          create: sliderTooltip,
+          slide: sliderTooltip
 				});
 			}
     },
@@ -144,10 +206,6 @@ var manifest = {
           sum += data[pref];
         }
         return sum;
-        // var acadEx = parseInt(data.acadEx,10);
-        // var sportProg = parseInt(data.sportProg,10);
-        // console.log(this.data.sportProg);
-        // return this.data.sportProg;
       },
       watch: "#schGend,#distPubTrans,#distCar,#artsProg,#sportsProg,#acadEx"
     }
