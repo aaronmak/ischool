@@ -19,12 +19,10 @@ module.exports = function (grunt) {
             'js': 'src/js/_bower.js',
             'css': 'src/css/_bower.css'
           },
-          exclude: [
-
-          ],
           dependencies: {
             'jquerymy' : ['sugar','jquery'],
-            'jquery' : 'sugar'
+            'jquery' : 'sugar',
+            'jquery-sidebar': 'jquery'
           },
           bowerOptions: {
             relative: false
@@ -79,17 +77,6 @@ module.exports = function (grunt) {
           }]
         }
       },
-      cssmin: {
-        target: {
-          files: [{
-            expand: true,
-            cwd: 'dist/css',
-            src: ['*.css', '!*.min.css'],
-            dest: 'dist/css',
-            ext: '.min.css'
-          }]
-        }
-      },
       postcss: {
         options: {
           map: true,
@@ -122,7 +109,7 @@ module.exports = function (grunt) {
       },
       bsReload: {
         css: {
-          reload: "dist/css/ischool.min.css"
+          reload: "dist/css/ischool.css"
         },
         js: {
           reload: ["dist/js/main.min.js","dist/js/_bower.min.js"]
@@ -137,7 +124,7 @@ module.exports = function (grunt) {
         },
         sass: {
           files: ['<%= sass.dist.files[0].src %>'],
-          tasks: ['sass','concat:css','postcss:dist', 'cssmin', 'bsReload:css']
+          tasks: ['sass','concat:css','postcss:dist', 'bsReload:css']
         },
         js: {
           files: ['<%= jshint.files %>'],

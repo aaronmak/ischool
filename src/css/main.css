@@ -11,9 +11,6 @@ html, body, #map {
 #map {
   width: 100%; }
 
-#sidebar {
-  width: 100%; }
-
 .tooltip {
   position: absolute;
   z-index: 1020;
@@ -45,5 +42,10 @@ html, body, #map {
   -webkit-border-radius: 4px;
   -moz-border-radius: 4px;
   border-radius: 4px; }
+
+#sidebar-control {
+  border: none; }
+  #sidebar-control ul {
+    list-style: none; }
 
 /*# sourceMappingURL=main.css.map */

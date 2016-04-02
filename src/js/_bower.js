@@ -131,7 +131,7 @@ function(b,c){return J(a,c)?a[c]:b})}});H(s,!0,!0,{insert:s.prototype.add});
 (function(a){if(ba.btoa)Nc=ba.btoa,Oc=ba.atob;else{var b=/[^A-Za-z0-9\+\/\=]/g;Nc=function(b){var d="",e,g,f,h,l,n,x=0;do e=b.charCodeAt(x++),g=b.charCodeAt(x++),f=b.charCodeAt(x++),h=e>>2,e=(e&3)<<4|g>>4,l=(g&15)<<2|f>>6,n=f&63,isNaN(g)?l=n=64:isNaN(f)&&(n=64),d=d+a.charAt(h)+a.charAt(e)+a.charAt(l)+a.charAt(n);while(x<b.length);return d};Oc=function(c){var d="",e,g,f,h,l,n=0;if(c.match(b))throw Error("String contains invalid base64 characters");c=c.replace(/[^A-Za-z0-9\+\/\=]/g,"");do e=a.indexOf(c.charAt(n++)),
 g=a.indexOf(c.charAt(n++)),h=a.indexOf(c.charAt(n++)),l=a.indexOf(c.charAt(n++)),e=e<<2|g>>4,g=(g&15)<<4|h>>2,f=(h&3)<<6|l,d+=s.fromCharCode(e),64!=h&&(d+=s.fromCharCode(g)),64!=l&&(d+=s.fromCharCode(f));while(n<c.length);return d}}})("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=");})();
 /*!
- * jQuery JavaScript Library v2.2.1
+ * jQuery JavaScript Library v2.2.2
  * http://jquery.com/
  *
  * Includes Sizzle.js
@@ -141,7 +141,7 @@ g=a.indexOf(c.charAt(n++)),h=a.indexOf(c.charAt(n++)),l=a.indexOf(c.charAt(n++))
  * Released under the MIT license
  * http://jquery.org/license
  *
- * Date: 2016-02-22T19:11Z
+ * Date: 2016-03-17T17:51Z
  */
 
 (function( global, factory ) {
@@ -197,7 +197,7 @@ var support = {};
 
 
 var
-	version = "2.2.1",
+	version = "2.2.2",
 
 	// Define a local copy of jQuery
 	jQuery = function( selector, context ) {
@@ -408,6 +408,7 @@ jQuery.extend( {
 	},
 
 	isPlainObject: function( obj ) {
+		var key;
 
 		// Not plain objects:
 		// - Any object or value whose internal [[Class]] property is not "[object Object]"
@@ -417,14 +418,18 @@ jQuery.extend( {
 			return false;
 		}
 
+		// Not own constructor property must be Object
 		if ( obj.constructor &&
-				!hasOwn.call( obj.constructor.prototype, "isPrototypeOf" ) ) {
+				!hasOwn.call( obj, "constructor" ) &&
+				!hasOwn.call( obj.constructor.prototype || {}, "isPrototypeOf" ) ) {
 			return false;
 		}
 
-		// If the function hasn't returned already, we're confident that
-		// |obj| is a plain object, created by {} or constructed with new Object
-		return true;
+		// Own properties are enumerated firstly, so to speed up,
+		// if last one is own, then all properties are own
+		for ( key in obj ) {}
+
+		return key === undefined || hasOwn.call( obj, key );
 	},
 
 	isEmptyObject: function( obj ) {
@@ -7457,6 +7462,12 @@ jQuery.extend( {
 	}
 } );
 
+// Support: IE <=11 only
+// Accessing the selectedIndex property
+// forces the browser to respect setting selected
+// on the option
+// The getter ensures a default option is selected
+// when in an optgroup
 if ( !support.optSelected ) {
 	jQuery.propHooks.selected = {
 		get: function( elem ) {
@@ -7465,6 +7476,16 @@ if ( !support.optSelected ) {
 				parent.parentNode.selectedIndex;
 			}
 			return null;
+		},
+		set: function( elem ) {
+			var parent = elem.parentNode;
+			if ( parent ) {
+				parent.selectedIndex;
+
+				if ( parent.parentNode ) {
+					parent.parentNode.selectedIndex;
+				}
+			}
 		}
 	};
 }
@@ -7659,7 +7680,8 @@ jQuery.fn.extend( {
 
 
 
-var rreturn = /\r/g;
+var rreturn = /\r/g,
+	rspaces = /[\x20\t\r\n\f]+/g;
 
 jQuery.fn.extend( {
 	val: function( value ) {
@@ -7735,9 +7757,15 @@ jQuery.extend( {
 		option: {
 			get: function( elem ) {
 
-				// Support: IE<11
-				// option.value not trimmed (#14858)
-				return jQuery.trim( elem.value );
+				var val = jQuery.find.attr( elem, "value" );
+				return val != null ?
+					val :
+
+					// Support: IE10-11+
+					// option.text throws exceptions (#14686, #14858)
+					// Strip and collapse whitespace
+					// https://html.spec.whatwg.org/#strip-and-collapse-whitespace
+					jQuery.trim( jQuery.text( elem ) ).replace( rspaces, " " );
 			}
 		},
 		select: {
@@ -7790,7 +7818,7 @@ jQuery.extend( {
 				while ( i-- ) {
 					option = options[ i ];
 					if ( option.selected =
-							jQuery.inArray( jQuery.valHooks.option.get( option ), values ) > -1
+						jQuery.inArray( jQuery.valHooks.option.get( option ), values ) > -1
 					) {
 						optionSet = true;
 					}
@@ -9485,18 +9513,6 @@ jQuery.ajaxPrefilter( "json jsonp", function( s, originalSettings, jqXHR ) {
 
 
 
-// Support: Safari 8+
-// In Safari 8 documents created via document.implementation.createHTMLDocument
-// collapse sibling forms: the second one becomes a child of the first one.
-// Because of that, this security measure has to be disabled in Safari 8.
-// https://bugs.webkit.org/show_bug.cgi?id=137337
-support.createHTMLDocument = ( function() {
-	var body = document.implementation.createHTMLDocument( "" ).body;
-	body.innerHTML = "<form></form><form></form>";
-	return body.childNodes.length === 2;
-} )();
-
-
 // Argument "data" should be string of html
 // context (optional): If specified, the fragment will be created in this context,
 // defaults to document
@@ -9509,12 +9525,7 @@ jQuery.parseHTML = function( data, context, keepScripts ) {
 		keepScripts = context;
 		context = false;
 	}
-
-	// Stop scripts or inline event handlers from being executed immediately
-	// by using document.implementation
-	context = context || ( support.createHTMLDocument ?
-		document.implementation.createHTMLDocument( "" ) :
-		document );
+	context = context || document;
 
 	var parsed = rsingleTag.exec( data ),
 		scripts = !keepScripts && [];
@@ -17294,3 +17305,286 @@ var slider = $.widget( "ui.slider", $.ui.mouse, {
 
 
 }));
+/**
+ * Create a new sidebar on this jQuery object.
+ *
+ * @example
+ * var sidebar = $('#sidebar').sidebar();
+ *
+ * @param {Object} [options] - Optional options object
+ * @param {string} [options.position=left] - Position of the sidebar: 'left' or 'right'
+ * @returns {jQuery}
+ */
+$.fn.sidebar = function(options) {
+    var $sidebar = this;
+    var $tabs = $sidebar.find('ul.sidebar-tabs, .sidebar-tabs > ul');
+    var $container = $sidebar.children('.sidebar-content').first();
+
+    options = $.extend({
+        position: 'left'
+    }, options || {});
+
+    $sidebar.addClass('sidebar-' + options.position);
+
+    $tabs.children('li').children('a').on('click', function(e) {
+        e.preventDefault();
+        var $tab = $(this).closest('li');
+
+        if ($tab.hasClass('active'))
+            $sidebar.close();
+        else if (!$tab.hasClass('disabled'))
+            $sidebar.open(this.hash.slice(1), $tab);
+    });
+
+    $sidebar.find('.sidebar-close').on('click', function() {
+        $sidebar.close();
+    });
+
+    /**
+     * Open sidebar (if necessary) and show the specified tab.
+     *
+     * @param {string} id - The id of the tab to show (without the # character)
+     * @param {jQuery} [$tab] - The jQuery object representing the tab node (used internally for efficiency)
+     */
+    $sidebar.open = function(id, $tab) {
+        if (typeof $tab === 'undefined')
+            $tab = $tabs.find('li > a[href="#' + id + '"]').parent();
+
+        // hide old active contents
+        $container.children('.sidebar-pane.active').removeClass('active');
+
+        // show new content
+        $container.children('#' + id).addClass('active');
+
+        // remove old active highlights
+        $tabs.children('li.active').removeClass('active');
+
+        // set new highlight
+        $tab.addClass('active');
+
+        $sidebar.trigger('content', { 'id': id });
+
+        if ($sidebar.hasClass('collapsed')) {
+            // open sidebar
+            $sidebar.trigger('opening');
+            $sidebar.removeClass('collapsed');
+        }
+    };
+
+    /**
+     * Close the sidebar (if necessary).
+     */
+    $sidebar.close = function() {
+        // remove old active highlights
+        $tabs.children('li.active').removeClass('active');
+
+        if (!$sidebar.hasClass('collapsed')) {
+            // close sidebar
+            $sidebar.trigger('closing');
+            $sidebar.addClass('collapsed');
+        }
+    };
+
+    return $sidebar;
+};
+
+/**
+ * @name Sidebar
+ * @class L.Control.Sidebar
+ * @extends L.Control
+ * @param {string} id - The id of the sidebar element (without the # character)
+ * @param {Object} [options] - Optional options object
+ * @param {string} [options.position=left] - Position of the sidebar: 'left' or 'right'
+ * @see L.control.sidebar
+ */
+L.Control.Sidebar = L.Control.extend(/** @lends L.Control.Sidebar.prototype */ {
+    includes: L.Mixin.Events,
+
+    options: {
+        position: 'left'
+    },
+
+    initialize: function (id, options) {
+        var i, child;
+
+        L.setOptions(this, options);
+
+        // Find sidebar HTMLElement
+        this._sidebar = L.DomUtil.get(id);
+
+        // Attach .sidebar-left/right class
+        L.DomUtil.addClass(this._sidebar, 'sidebar-' + this.options.position);
+
+        // Attach touch styling if necessary
+        if (L.Browser.touch)
+            L.DomUtil.addClass(this._sidebar, 'leaflet-touch');
+
+        // Find sidebar > div.sidebar-content
+        for (i = this._sidebar.children.length - 1; i >= 0; i--) {
+            child = this._sidebar.children[i];
+            if (child.tagName == 'DIV' &&
+                    L.DomUtil.hasClass(child, 'sidebar-content'))
+                this._container = child;
+        }
+
+        // Find sidebar ul.sidebar-tabs > li, sidebar .sidebar-tabs > ul > li
+        this._tabitems = this._sidebar.querySelectorAll('ul.sidebar-tabs > li, .sidebar-tabs > ul > li');
+        for (i = this._tabitems.length - 1; i >= 0; i--) {
+            this._tabitems[i]._sidebar = this;
+        }
+
+        // Find sidebar > div.sidebar-content > div.sidebar-pane
+        this._panes = [];
+        this._closeButtons = [];
+        for (i = this._container.children.length - 1; i >= 0; i--) {
+            child = this._container.children[i];
+            if (child.tagName == 'DIV' &&
+                L.DomUtil.hasClass(child, 'sidebar-pane')) {
+                this._panes.push(child);
+
+                var closeButtons = child.querySelectorAll('.sidebar-close');
+                for (var j = 0, len = closeButtons.length; j < len; j++)
+                    this._closeButtons.push(closeButtons[j]);
+            }
+        }
+    },
+
+    /**
+     * Add this sidebar to the specified map.
+     *
+     * @param {L.Map} map
+     * @returns {Sidebar}
+     */
+    addTo: function (map) {
+        var i, child;
+
+        this._map = map;
+
+        for (i = this._tabitems.length - 1; i >= 0; i--) {
+            child = this._tabitems[i];
+            L.DomEvent
+                .on(child.querySelector('a'), 'click', L.DomEvent.preventDefault )
+                .on(child.querySelector('a'), 'click', this._onClick, child);
+        }
+
+        for (i = this._closeButtons.length - 1; i >= 0; i--) {
+            child = this._closeButtons[i];
+            L.DomEvent.on(child, 'click', this._onCloseClick, this);
+        }
+
+        return this;
+    },
+
+    /**
+     * Remove this sidebar from the map.
+     *
+     * @param {L.Map} map
+     * @returns {Sidebar}
+     */
+    removeFrom: function (map) {
+        var i, child;
+
+        this._map = null;
+
+        for (i = this._tabitems.length - 1; i >= 0; i--) {
+            child = this._tabitems[i];
+            L.DomEvent.off(child.querySelector('a'), 'click', this._onClick);
+        }
+
+        for (i = this._closeButtons.length - 1; i >= 0; i--) {
+            child = this._closeButtons[i];
+            L.DomEvent.off(child, 'click', this._onCloseClick, this);
+        }
+
+        return this;
+    },
+
+    /**
+     * Open sidebar (if necessary) and show the specified tab.
+     *
+     * @param {string} id - The id of the tab to show (without the # character)
+     */
+    open: function(id) {
+        var i, child;
+
+        // hide old active contents and show new content
+        for (i = this._panes.length - 1; i >= 0; i--) {
+            child = this._panes[i];
+            if (child.id == id)
+                L.DomUtil.addClass(child, 'active');
+            else if (L.DomUtil.hasClass(child, 'active'))
+                L.DomUtil.removeClass(child, 'active');
+        }
+
+        // remove old active highlights and set new highlight
+        for (i = this._tabitems.length - 1; i >= 0; i--) {
+            child = this._tabitems[i];
+            if (child.querySelector('a').hash == '#' + id)
+                L.DomUtil.addClass(child, 'active');
+            else if (L.DomUtil.hasClass(child, 'active'))
+                L.DomUtil.removeClass(child, 'active');
+        }
+
+        this.fire('content', { id: id });
+
+        // open sidebar (if necessary)
+        if (L.DomUtil.hasClass(this._sidebar, 'collapsed')) {
+            this.fire('opening');
+            L.DomUtil.removeClass(this._sidebar, 'collapsed');
+        }
+
+        return this;
+    },
+
+    /**
+     * Close the sidebar (if necessary).
+     */
+    close: function() {
+        // remove old active highlights
+        for (var i = this._tabitems.length - 1; i >= 0; i--) {
+            var child = this._tabitems[i];
+            if (L.DomUtil.hasClass(child, 'active'))
+                L.DomUtil.removeClass(child, 'active');
+        }
+
+        // close sidebar
+        if (!L.DomUtil.hasClass(this._sidebar, 'collapsed')) {
+            this.fire('closing');
+            L.DomUtil.addClass(this._sidebar, 'collapsed');
+        }
+
+        return this;
+    },
+
+    /**
+     * @private
+     */
+    _onClick: function() {
+        if (L.DomUtil.hasClass(this, 'active'))
+            this._sidebar.close();
+        else if (!L.DomUtil.hasClass(this, 'disabled'))
+            this._sidebar.open(this.querySelector('a').hash.slice(1));
+    },
+
+    /**
+     * @private
+     */
+    _onCloseClick: function () {
+        this.close();
+    }
+});
+
+/**
+ * Creates a new sidebar.
+ *
+ * @example
+ * var sidebar = L.control.sidebar('sidebar').addTo(map);
+ *
+ * @param {string} id - The id of the sidebar element (without the # character)
+ * @param {Object} [options] - Optional options object
+ * @param {string} [options.position=left] - Position of the sidebar: 'left' or 'right'
+ * @returns {Sidebar} A new sidebar instance
+ */
+L.control.sidebar = function (id, options) {
+    return new L.Control.Sidebar(id, options);
+};

@@ -24,9 +24,10 @@
     "normalize-css": "^3.0.3",
     "skeleton": "^2.0.4",
     "jquery": "^2.2.1",
-    "jquery-ui-slider": "*"
+    "jquery-ui-slider": "*",
+    "sidebar-v2": "^0.3.0"
   },
   "resolutions": {
-    "jquery": "~1.11"
+    "jquery": "~2.2.2"
   }
 }
