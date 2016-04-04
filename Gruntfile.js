@@ -20,8 +20,6 @@ module.exports = function (grunt) {
             'css': 'src/css/_bower.css'
           },
           dependencies: {
-            'jquerymy' : ['sugar','jquery'],
-            'jquery' : 'sugar',
             'jquery-sidebar': 'jquery'
           },
           bowerOptions: {

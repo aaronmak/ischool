@@ -97,13 +97,13 @@ html, body, #map {
       transition: width 500ms; } }
   @media (min-width: 768px) and (max-width: 991px) {
     .sidebar {
-      width: 500px; } }
+      width: 60%; } }
   @media (min-width: 992px) and (max-width: 1199px) {
     .sidebar {
-      width: 600px; } }
+      width: 60%; } }
   @media (min-width: 1200px) {
     .sidebar {
-      width: 600px; } }
+      width: 60%; } }
 
 #schoolTable {
   tr:hover {
