@@ -1,3 +1,5 @@
+// Utilities
+
 function toTitleCase(str)
 {
     return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
@@ -13,6 +15,8 @@ function cloneObject(obj) {
     }
     return temp;
 }
+
+// Map Init
 
 var map = L.map('map', {
     zoomControl:false, maxZoom:17, minZoom:11
@@ -208,3 +212,28 @@ noUiSlider.create(slider7, defaultOptions);
 noUiSlider.create(slider8, defaultOptions);
 noUiSlider.create(slider9, defaultOptions);
 noUiSlider.create(slider10, defaultOptions);
+
+///// Data Source
+
+function pop_SecondarySchools(feature, layer) {
+  var popupContent = toTitleCase(String(feature.properties.School_Name));
+  layer.bindPopup(popupContent);
+}
+
+function schoolMarker(feature) {
+  var marker = L.MakiMarkers.icon({
+    icon: "school",
+    color: "#474747",
+    size: "m"
+  });
+  return marker;
+}
+
+var json_SecondarySchools = new L.geoJson(secondarySchools, {
+  onEachFeature: pop_SecondarySchools,
+  pointToLayer: function(feature, latlng) {
+    return L.marker(latlng, {
+      icon: schoolMarker(feature)
+    });
+  }
+}).addTo(map);

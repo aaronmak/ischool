@@ -26,7 +26,8 @@
     "jquery": "^2.2.1",
     "jquery-ui-slider": "*",
     "sidebar-v2": "^0.3.0",
-    "nouislider": "^8.3.0"
+    "nouislider": "^8.3.0",
+    "Leaflet.MakiMarkers": "^1.0.1"
   },
   "resolutions": {
     "jquery": "~2.2.2"
