@@ -214,10 +214,23 @@ noUiSlider.create(slider9, defaultOptions);
 noUiSlider.create(slider10, defaultOptions);
 
 ///// Data Source
+var schoolTableBody = $('#schoolTable tbody');
 
 function pop_SecondarySchools(feature, layer) {
   var popupContent = toTitleCase(String(feature.properties.School_Name));
   layer.bindPopup(popupContent);
+  var tr = document.createElement('tr');
+  var td1 = document.createElement('td');
+  var td2 = document.createElement('td');
+  var item = schoolTableBody.append(tr);
+  var lastTr = $('#schoolTable tbody tr:last-child');
+  lastTr.append(td1,td2);
+  td1.innerHTML = toTitleCase(String(feature.properties.School_Name));
+  td2.innerHTML = String(feature.properties.address);
+  lastTr.click(function() {
+    map.setView(layer.getLatLng(), 15);
+    layer.openPopup();
+  });
 }
 
 function schoolMarker(feature) {
@@ -237,3 +250,5 @@ var json_SecondarySchools = new L.geoJson(secondarySchools, {
     });
   }
 }).addTo(map);
+
+///// School Table
