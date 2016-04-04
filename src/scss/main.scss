@@ -64,6 +64,25 @@ html, body, #map {
             border-radius: 4px;
 }
 
+.slider-label {
+  font-size: 1.3rem;
+  line-height: 1.2;
+  float: left;
+}
+
+.slider-label--right {
+  text-align: right;
+  float: right;
+}
+
+.slider-label-container {
+  margin-top: 30px;
+}
+
+.slider-ahp {
+  margin-top: 10px;
+}
+
 #sidebar-control {
   border: none;
   ul {

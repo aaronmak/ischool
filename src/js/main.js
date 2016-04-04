@@ -24,57 +24,12 @@ var basemap = L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: ' &copy; <a href="http://openstreetmap.org">OpenStreetMap</a>',
     maxZoom: 17
 }).addTo(map);
-//
-//
-// var providers = {};
-//
-// providers.OpenStreetMap_BlackAndWhite = {
-//     title: 'osm bw',
-//     icon: 'css/image/openstreetmap_blackandwhite.png',
-//     layer: L.tileLayer('http://{s}.tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png', {
-//         maxZoom: 17,
-//         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-//     })
-// };
-//
-// providers.OpenStreetMap_Mapnik = {
-//     title: 'osm',
-//     icon: 'css/image/openstreetmap_mapnik.png',
-//     layer: L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-//         maxZoom: 19,
-//         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-//     })
-// };
-//
-// providers.OpenStreetMap_DE = {
-//     title: 'osm de',
-//     icon: 'css/image/openstreetmap_de.png',
-//     layer: L.tileLayer('http://{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png', {
-//         maxZoom: 17,
-//         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-//     })
-// };
-//
-// var layers = [];
-// for (var providerId in providers) {
-//     layers.push(providers[providerId]);
-// }
-//
-// var layerOrder = [];
-// function stackLayers() {
-//     for (index = 0; index < layerOrder.length; index++) {
-//         map.removeLayer(layerOrder[index]);
-//         map.addLayer(layerOrder[index]);
-//     }
-// }
+
 
 L.control.zoom({
   position: 'topleft'
 }).addTo(map);
 
-// L.control.pan({
-//   position: 'bottomleft'
-// }).addTo(map);
 
 L.control.scale({options: {position: 'bottomright', maxWidth: 100, metric: true, imperial: false, updateWhenIdle: false}}).addTo(map);
 
@@ -220,9 +175,9 @@ var sidebar = L.control.sidebar('sidebar-control', {
 
 map.addControl(sidebar);
 
-var slider1 = document.getElementById('slider1');
+////// Sliders
 
-noUiSlider.create(slider1, {
+var defaultOptions = {
   start: 4,
   step: 1,
   behaviour: "tap",
@@ -230,4 +185,26 @@ noUiSlider.create(slider1, {
     'min': 1,
     'max': 7
   }
-});
+};
+
+var slider1 = document.getElementById('slider1-2');
+var slider2 = document.getElementById('slider1-3');
+var slider3 = document.getElementById('slider1-4');
+var slider4 = document.getElementById('slider1-5');
+var slider5 = document.getElementById('slider2-3');
+var slider6 = document.getElementById('slider2-4');
+var slider7 = document.getElementById('slider2-5');
+var slider8 = document.getElementById('slider3-4');
+var slider9 = document.getElementById('slider3-5');
+var slider10 = document.getElementById('slider4-5');
+
+noUiSlider.create(slider1, defaultOptions);
+noUiSlider.create(slider2, defaultOptions);
+noUiSlider.create(slider3, defaultOptions);
+noUiSlider.create(slider4, defaultOptions);
+noUiSlider.create(slider5, defaultOptions);
+noUiSlider.create(slider6, defaultOptions);
+noUiSlider.create(slider7, defaultOptions);
+noUiSlider.create(slider8, defaultOptions);
+noUiSlider.create(slider9, defaultOptions);
+noUiSlider.create(slider10, defaultOptions);
