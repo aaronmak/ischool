@@ -168,3 +168,5 @@ function getCoord(postalcode) {
     console.log("Request Failed: " + err);
   });
 }
+
+var test;
