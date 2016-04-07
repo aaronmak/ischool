@@ -111,6 +111,7 @@ function schoolMarker(feature) {
 var json_SecondarySchools = new L.geoJson(secondarySchools, {
   onEachFeature: pop_SecondarySchools,
   pointToLayer: function(feature, latlng) {
+    // console.log(latlng);
     return L.marker(latlng, {
       icon: schoolMarker(feature)
     });
@@ -119,21 +120,11 @@ var json_SecondarySchools = new L.geoJson(secondarySchools, {
 
 
 ///// Geocode Home Postal Code
-var homeMarkerIcon = L.MakiMarkers.icon({
-  icon: "building",
-  color: "#ffbe95",
-  size: "m"
-});
-
-var homePostalCode = 0;
-var homeCoord;
-
-$('#inputPostalCode').change(function() {
-  homePostalCode = $('#inputPostalCode').val();
-  getCoord(homePostalCode);
-});
-
 var homePoint = {
+  "type": "FeatureCollection",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+  "features": [
+    {
     "type": "Feature",
     "properties": {
         "name": "Home"
@@ -142,31 +133,59 @@ var homePoint = {
         "type": "Point",
         "coordinates": []
     }
-};
+    }
+]};
+var homePostalCode = 0;
+var homeCoord;
+var add_hmarker;
+
+function homeMarker(feature) {
+  var hmarker = L.MakiMarkers.icon({
+    icon: "building",
+    color: "#ffbe95",
+    size: "l"
+  });
+  return hmarker;
+}
 
 function getCoord(postalcode) {
-  var url = 'http://www.onemap.sg/API/services.svc/basicSearch?token=qo/s2TnSUmfLz+32CvLC4RMVkzEFYjxqyti1KhByvEacEdMWBpCuSSQ+IFRT84QjGPBCuz/cBom8PfSm3GjEsGc8PkdEEOEr&searchVal='+postalcode+'&otptFlds=SEARCHVAL,CATEGORY&returnGeom=1&rset=1';
-  $.getJSON(url)
-  .done(function(data) {
-    var xCoord = parseFloat(data.SearchResults[1].X);
-    var yCoord = parseFloat(data.SearchResults[1].Y);
-    homeCoord = [xCoord,yCoord];
-    homePoint.geometry.coordinates = homeCoord;
-    console.log(homePoint);
-    // L.marker(coordsToLatLng(homeCoord), {
-    //   icon: homeMarker
-    // }).addTo(map);
-    L.geoJson(homePoint, {
-      pointToLayer: function(feature, latlng) {
-        return L.marker(latlng, {
-          icon: homeMarkerIcon
-        });
-      }
-    }).addTo(map);
-  })
-  .fail(function(err){
-    console.log("Request Failed: " + err);
+  if (add_hmarker) {map.removeLayer(add_hmarker);} // to remove old marker
+  var getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=0+nU5hAyy+NgqVpO3mepHsmZ1r6d+LI49ib3TUJuO9mG+HraaLvzEmEjXCdpYzyL14cwxTLFj6Jgc1EMIUClbdsmU/Egnr44bte4m9ecFNv2Rj99njfzrw==|mv73ZvjFcSo=';
+  if (document.location.hostname == "localhost") {
+    getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=xkg8VRu6Ol+gMH+SUamkRIEB7fKzhwMvfMo/2U8UJcFhdvR4yN1GutmUIA3A6r3LDhot215OVVkZvNRzjl28TNUZgYFSswOi';
+  }
+  var token = '';
+  // console.log('getTokenURL: ' + getTokenURL);
+  $.getJSON(getTokenURL)
+  .done(function(data){
+    token = data.GetToken[0].NewToken;
+    // console.log('token: ' + token);
+    var url = 'http://www.onemap.sg/APIV2/services.svc/basicSearchV2?token='+token+'&searchVal='+postalcode+'&otptFlds=SEARCHVAL,CATEGORY&returnGeom=0&rset=1&projSys=WGS84';
+    // console.log(url);
+    $.getJSON(url)
+    .done(function(data) {
+      // console.log(data);
+      var xCoord = parseFloat(data.SearchResults[1].X);
+      var yCoord = parseFloat(data.SearchResults[1].Y);
+      homeCoord = [xCoord,yCoord];
+      homePoint.features[0].geometry.coordinates = homeCoord;
+      add_hmarker = L.geoJson(homePoint, {
+        pointToLayer: function(feature, latlng) {
+          return L.marker(latlng, {
+            icon: homeMarker(feature)
+          });
+        }
+      }).addTo(map);
+      // console.log(add_hmarker);
+    })
+    .fail(function(err){
+      console.log("Request Failed: " + err);
+    });
   });
 }
+
+$('#inputPostalCode').change(function() {
+  getCoord($('#inputPostalCode').val());
+});
 
 var test;
