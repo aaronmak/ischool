@@ -101,7 +101,7 @@ function pop_SecondarySchools(feature, layer) {
 
 function schoolMarker(feature) {
   var marker = L.MakiMarkers.icon({
-    icon: "school",
+    icon: "college",
     color: "#474747",
     size: "m"
   });
@@ -116,3 +116,36 @@ var json_SecondarySchools = new L.geoJson(secondarySchools, {
     });
   }
 }).addTo(map);
+
+
+///// Geocode Home Postal Code
+var homeMarkerIcon = L.MakiMarkers.icon({
+  icon: "building",
+  color: "#ffbe95",
+  size: "m"
+});
+
+var homePostalCode = 0;
+var homeCoord;
+
+$('#inputPostalCode').change(function() {
+  homePostalCode = $('#inputPostalCode').val();
+  getCoord(homePostalCode);
+});
+
+function getCoord(postalcode) {
+  var url = 'http://www.onemap.sg/API/services.svc/basicSearch?token=qo/s2TnSUmfLz+32CvLC4RMVkzEFYjxqyti1KhByvEacEdMWBpCuSSQ+IFRT84QjGPBCuz/cBom8PfSm3GjEsGc8PkdEEOEr&searchVal='+postalcode+'&otptFlds=SEARCHVAL,CATEGORY&returnGeom=1&rset=1';
+  $.getJSON(url)
+  .done(function(data) {
+    var xCoord = parseFloat(data.SearchResults[1].X);
+    var yCoord = parseFloat(data.SearchResults[1].Y);
+    homeCoord = [xCoord,yCoord];
+    console.log(homeCoord);
+    // L.marker(homelatlng, {
+    //   icon: homeMarker
+    // }).addTo(map);
+  })
+  .fail(function(err){
+    console.log("Request Failed: " + err);
+  });
+}

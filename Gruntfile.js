@@ -48,12 +48,13 @@ module.exports = function (grunt) {
         dist: {
           files: {
             'dist/js/_bower.min.js': 'src/js/_bower.js',
-            'dist/js/main.min.js': 'src/js/main.js'
+            'dist/js/main.min.js': 'src/js/main.js',
+            'dist/js/turf_distance.min.js': 'src/js/turf_distance.min.js'
           }
         }
       },
       jshint: {
-        files: ['Gruntfile.js', 'src/js/*.js', 'test/**/*.js', '!src/**/_bower.js'],
+        files: ['Gruntfile.js', 'src/js/*.js', 'test/**/*.js', '!src/**/_bower.js', '!src/**/turf_distance.min.js'],
         options: {
           // options here to override JSHint defaults
           globals: {
