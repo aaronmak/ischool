@@ -13,7 +13,6 @@
         <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" />
         <link rel="stylesheet" href="/css/ischool.css">
-        <!-- <script type='text/javascript' src='http://www.onemap.sg/API/JS/?accessKEY=0+nU5hAyy+NgqVpO3mepHsmZ1r6d+LI49ib3TUJuO9mG+HraaLvzEmEjXCdpYzyL14cwxTLFj6Jgc1EMIUClbdsmU/Egnr44bte4m9ecFNv2Rj99njfzrw==|mv73ZvjFcSo=&v=3.10&type=full&projSys=WGS84'></script> -->
         <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
         <script src="/js/turf_distance.min.js"></script>
         <script src="/js/_bower.min.js"></script>
@@ -63,7 +62,7 @@
                 </h1>
                 <label for="postalCode">Home Postal Code</label>
                 <input id="inputPostalCode" name="postalCode" type="text">
-                <div id="postalCodeResults"></div>
+                <span id="postalCodeResult"></span>
                 <label for="prefGen">Preferred School Gender</label>
                 <select name="u-full-width" id="prefGen">
                   <option name="prefGen" value="mixed" checked="checked">Mixed</option>
@@ -75,53 +74,53 @@
                     <div class="six columns"><span class="slider-label">Academic Excellence</span></div>
                     <div class="six columns"><span class="slider-label slider-label--right">Sports Programs</span></div>
                 </div>
-                <div class="slider-ahp" id="slider1-2"></div>
+                <div class="slider-ahp" id="slider0-1"></div>
                 <div class="row slider-label-container">
                   <div class="six columns"><span class="slider-label">Academic Excellence</span></div>
                   <div class="six columns"><span class="slider-label slider-label--right">Arts Programs</span></div>
+                </div>
+                <div class="slider-ahp" id="slider0-2"></div>
+                <div class="row slider-label-container">
+                  <div class="six columns"><span class="slider-label">Academic Excellence</span></div>
+                  <div class="six columns"><span class="slider-label slider-label--right">Proximity to Home</span></div>
+                </div>
+                <div class="slider-ahp" id="slider0-3"></div>
+                <div class="row slider-label-container">
+                  <div class="six columns"><span class="slider-label">Academic Excellence</span></div>
+                  <div class="six columns"><span class="slider-label slider-label--right">School Gender</span></div>
+                </div>
+                <div class="slider-ahp" id="slider0-4"></div>
+                <div class="row slider-label-container">
+                  <div class="six columns"><span class="slider-label">Sports Programs</span></div>
+                  <div class="six columns"><span class="slider-label slider-label--right">Arts Programs</span></div>
+                </div>
+                <div class="slider-ahp" id="slider1-2"></div>
+                <div class="row slider-label-container">
+                  <div class="six columns"><span class="slider-label">Sports Programs</span></div>
+                  <div class="six columns"><span class="slider-label slider-label--right">Proximity to Home</span></div>
                 </div>
                 <div class="slider-ahp" id="slider1-3"></div>
                 <div class="row slider-label-container">
-                  <div class="six columns"><span class="slider-label">Academic Excellence</span></div>
-                  <div class="six columns"><span class="slider-label slider-label--right">Proximity to Home</span></div>
+                  <div class="six columns"><span class="slider-label">Sports Programs</span></div>
+                  <div class="six columns"><span class="slider-label slider-label--right">School Gender</span></div>
                 </div>
                 <div class="slider-ahp" id="slider1-4"></div>
                 <div class="row slider-label-container">
-                  <div class="six columns"><span class="slider-label">Academic Excellence</span></div>
-                  <div class="six columns"><span class="slider-label slider-label--right">School Gender</span></div>
-                </div>
-                <div class="slider-ahp" id="slider1-5"></div>
-                <div class="row slider-label-container">
-                  <div class="six columns"><span class="slider-label">Sports Programs</span></div>
-                  <div class="six columns"><span class="slider-label slider-label--right">Arts Programs</span></div>
+                  <div class="six columns"><span class="slider-label">Arts Programs</span></div>
+                  <div class="six columns"><span class="slider-label slider-label--right">Proximity to Home</span></div>
                 </div>
                 <div class="slider-ahp" id="slider2-3"></div>
                 <div class="row slider-label-container">
-                  <div class="six columns"><span class="slider-label">Sports Programs</span></div>
-                  <div class="six columns"><span class="slider-label slider-label--right">Proximity to Home</span></div>
+                  <div class="six columns"><span class="slider-label">Arts Programs</span></div>
+                  <div class="six columns"><span class="slider-label slider-label--right">School Gender</span></div>
                 </div>
                 <div class="slider-ahp" id="slider2-4"></div>
-                <div class="row slider-label-container">
-                  <div class="six columns"><span class="slider-label">Sports Programs</span></div>
-                  <div class="six columns"><span class="slider-label slider-label--right">School Gender</span></div>
-                </div>
-                <div class="slider-ahp" id="slider2-5"></div>
-                <div class="row slider-label-container">
-                  <div class="six columns"><span class="slider-label">Arts Programs</span></div>
-                  <div class="six columns"><span class="slider-label slider-label--right">Proximity to Home</span></div>
-                </div>
-                <div class="slider-ahp" id="slider3-4"></div>
-                <div class="row slider-label-container">
-                  <div class="six columns"><span class="slider-label">Arts Programs</span></div>
-                  <div class="six columns"><span class="slider-label slider-label--right">School Gender</span></div>
-                </div>
-                <div class="slider-ahp" id="slider3-5"></div>
                 <div class="row slider-label-container">
                   <div class="six columns"><span class="slider-label">Proximity to Home</span></div>
                   <div class="six columns"><span class="slider-label slider-label--right">School Gender</span></div>
                 </div>
-                <div class="slider-ahp" id="slider4-5"></div>
-                <button class="button button-primary">Sort Schools</button>
+                <div class="slider-ahp" id="slider3-4"></div>
+                <button id="buttonAHP" class="button button-primary">Sort Schools</button>
             </div>
           </div>
         </div>
