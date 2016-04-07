@@ -133,6 +133,17 @@ $('#inputPostalCode').change(function() {
   getCoord(homePostalCode);
 });
 
+var homePoint = {
+    "type": "Feature",
+    "properties": {
+        "name": "Home"
+    },
+    "geometry": {
+        "type": "Point",
+        "coordinates": []
+    }
+};
+
 function getCoord(postalcode) {
   var url = 'http://www.onemap.sg/API/services.svc/basicSearch?token=qo/s2TnSUmfLz+32CvLC4RMVkzEFYjxqyti1KhByvEacEdMWBpCuSSQ+IFRT84QjGPBCuz/cBom8PfSm3GjEsGc8PkdEEOEr&searchVal='+postalcode+'&otptFlds=SEARCHVAL,CATEGORY&returnGeom=1&rset=1';
   $.getJSON(url)
@@ -140,10 +151,18 @@ function getCoord(postalcode) {
     var xCoord = parseFloat(data.SearchResults[1].X);
     var yCoord = parseFloat(data.SearchResults[1].Y);
     homeCoord = [xCoord,yCoord];
-    console.log(homeCoord);
-    // L.marker(homelatlng, {
+    homePoint.geometry.coordinates = homeCoord;
+    console.log(homePoint);
+    // L.marker(coordsToLatLng(homeCoord), {
     //   icon: homeMarker
     // }).addTo(map);
+    L.geoJson(homePoint, {
+      pointToLayer: function(feature, latlng) {
+        return L.marker(latlng, {
+          icon: homeMarkerIcon
+        });
+      }
+    }).addTo(map);
   })
   .fail(function(err){
     console.log("Request Failed: " + err);
