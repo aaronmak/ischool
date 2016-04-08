@@ -117,7 +117,6 @@ var json_SecondarySchools = new L.geoJson(secondarySchools, {
   }
 }).addTo(map);
 
-
 ///// Geocode Home Postal Code
 var homeMarkerIcon = L.MakiMarkers.icon({
   icon: "building",
