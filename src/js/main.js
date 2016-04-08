@@ -1,5 +1,28 @@
 // Utilities
 
+Object.size = function(obj) {
+    var size = 0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+};
+
+function multiplyMatrices(m1, m2) {
+    var result = [];
+    for (var i = 0; i < m1.length; i++) {
+        result[i] = [];
+        for (var j = 0; j < m2[0].length; j++) {
+            var sum = 0;
+            for (var k = 0; k < m1[0].length; k++) {
+                sum += m1[i][k] * m2[k][j];
+            }
+            result[i][j] = sum;
+        }
+    }
+    return result;
+}
+
 function toTitleCase(str)
 {
     return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
@@ -46,25 +69,25 @@ map.addControl(sidebar);
 ////// Sliders
 
 var defaultOptions = {
-  start: 4,
+  start: 0,
   step: 1,
   behaviour: "tap",
   range: {
-    'min': 1,
-    'max': 7
+    'min': -3,
+    'max': 3
   }
 };
 
-var slider1 = document.getElementById('slider1-2');
-var slider2 = document.getElementById('slider1-3');
-var slider3 = document.getElementById('slider1-4');
-var slider4 = document.getElementById('slider1-5');
-var slider5 = document.getElementById('slider2-3');
-var slider6 = document.getElementById('slider2-4');
-var slider7 = document.getElementById('slider2-5');
-var slider8 = document.getElementById('slider3-4');
-var slider9 = document.getElementById('slider3-5');
-var slider10 = document.getElementById('slider4-5');
+var slider1 = document.getElementById('slider0-1');
+var slider2 = document.getElementById('slider0-2');
+var slider3 = document.getElementById('slider0-3');
+var slider4 = document.getElementById('slider0-4');
+var slider5 = document.getElementById('slider1-2');
+var slider6 = document.getElementById('slider1-3');
+var slider7 = document.getElementById('slider1-4');
+var slider8 = document.getElementById('slider2-3');
+var slider9 = document.getElementById('slider2-4');
+var slider10 = document.getElementById('slider3-4');
 
 noUiSlider.create(slider1, defaultOptions);
 noUiSlider.create(slider2, defaultOptions);
@@ -111,6 +134,7 @@ function schoolMarker(feature) {
 var json_SecondarySchools = new L.geoJson(secondarySchools, {
   onEachFeature: pop_SecondarySchools,
   pointToLayer: function(feature, latlng) {
+    // console.log(latlng);
     return L.marker(latlng, {
       icon: schoolMarker(feature)
     });
@@ -118,21 +142,11 @@ var json_SecondarySchools = new L.geoJson(secondarySchools, {
 }).addTo(map);
 
 ///// Geocode Home Postal Code
-var homeMarkerIcon = L.MakiMarkers.icon({
-  icon: "building",
-  color: "#ffbe95",
-  size: "m"
-});
-
-var homePostalCode = 0;
-var homeCoord;
-
-$('#inputPostalCode').change(function() {
-  homePostalCode = $('#inputPostalCode').val();
-  getCoord(homePostalCode);
-});
-
 var homePoint = {
+  "type": "FeatureCollection",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+  "features": [
+    {
     "type": "Feature",
     "properties": {
         "name": "Home"
@@ -141,31 +155,134 @@ var homePoint = {
         "type": "Point",
         "coordinates": []
     }
-};
+    }
+]};
+var homePostalCode = 0;
+var homeCoord;
+var add_hmarker;
+
+function homeMarker(feature) {
+  var hmarker = L.MakiMarkers.icon({
+    icon: "building",
+    color: "#ffbe95",
+    size: "l"
+  });
+  return hmarker;
+}
 
 function getCoord(postalcode) {
-  var url = 'http://www.onemap.sg/API/services.svc/basicSearch?token=qo/s2TnSUmfLz+32CvLC4RMVkzEFYjxqyti1KhByvEacEdMWBpCuSSQ+IFRT84QjGPBCuz/cBom8PfSm3GjEsGc8PkdEEOEr&searchVal='+postalcode+'&otptFlds=SEARCHVAL,CATEGORY&returnGeom=1&rset=1';
-  $.getJSON(url)
-  .done(function(data) {
-    var xCoord = parseFloat(data.SearchResults[1].X);
-    var yCoord = parseFloat(data.SearchResults[1].Y);
-    homeCoord = [xCoord,yCoord];
-    homePoint.geometry.coordinates = homeCoord;
-    console.log(homePoint);
-    // L.marker(coordsToLatLng(homeCoord), {
-    //   icon: homeMarker
-    // }).addTo(map);
-    L.geoJson(homePoint, {
-      pointToLayer: function(feature, latlng) {
-        return L.marker(latlng, {
-          icon: homeMarkerIcon
-        });
+  if (add_hmarker) {map.removeLayer(add_hmarker);} // to remove old marker
+  var getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=0+nU5hAyy+NgqVpO3mepHsmZ1r6d+LI49ib3TUJuO9mG+HraaLvzEmEjXCdpYzyL14cwxTLFj6Jgc1EMIUClbdsmU/Egnr44bte4m9ecFNv2Rj99njfzrw==|mv73ZvjFcSo=';
+  if (document.location.hostname == "localhost") {
+    getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=xkg8VRu6Ol+gMH+SUamkRIEB7fKzhwMvfMo/2U8UJcFhdvR4yN1GutmUIA3A6r3LDhot215OVVkZvNRzjl28TNUZgYFSswOi';
+  }
+  var token = '';
+  // console.log('getTokenURL: ' + getTokenURL);
+  $.getJSON(getTokenURL)
+  .done(function(data){
+    token = data.GetToken[0].NewToken;
+    // console.log('token: ' + token);
+    var url = 'http://www.onemap.sg/APIV2/services.svc/basicSearchV2?token='+token+'&searchVal='+postalcode+'&otptFlds=SEARCHVAL,CATEGORY&returnGeom=0&rset=1&projSys=WGS84';
+    // console.log(url);
+    $.getJSON(url)
+    .done(function(data) {
+      console.log(data.size);
+      console.log(data);
+      if (data.SearchResults.length === 2) {
+        var xCoord = parseFloat(data.SearchResults[1].X);
+        var yCoord = parseFloat(data.SearchResults[1].Y);
+        homeCoord = [xCoord,yCoord];
+        homePoint.features[0].geometry.coordinates = homeCoord;
+        add_hmarker = L.geoJson(homePoint, {
+          pointToLayer: function(feature, latlng) {
+            return L.marker(latlng, {
+              icon: homeMarker(feature)
+            });
+          }
+        }).addTo(map);
+        $('#postalCodeResult').html('Postal Code Found');
       }
-    }).addTo(map);
-  })
-  .fail(function(err){
-    console.log("Request Failed: " + err);
+      else {
+          $('#postalCodeResult').html('Postal Code Not Found');
+      }
+      // console.log(add_hmarker);
+    })
+    .fail(function(err){
+      $('#postalCodeResult').html('<span>Postal Code Error</span>');
+    });
   });
 }
+
+function calcWeight() {
+  var sliderInput = [];
+  var weightMatrix = [];
+  var weightRowSum = [];
+  var weightSum = 0;
+  sliderInput.push(parseFloat(slider1.noUiSlider.get()),
+               parseFloat(slider2.noUiSlider.get()),
+               parseFloat(slider3.noUiSlider.get()),
+               parseFloat(slider4.noUiSlider.get()),
+               parseFloat(slider5.noUiSlider.get()),
+               parseFloat(slider6.noUiSlider.get()),
+               parseFloat(slider7.noUiSlider.get()),
+               parseFloat(slider8.noUiSlider.get()),
+               parseFloat(slider9.noUiSlider.get()),
+               parseFloat(slider10.noUiSlider.get()));
+  for (i=0;i<sliderInput.length;i++) {
+    if (sliderInput[i] === 0) {
+      sliderInput[i] = 1;
+    } else if (sliderInput[i] > 0) {
+      sliderInput[i]++;
+    } else {
+      sliderInput[i]--;
+      sliderInput[i] = Math.pow((sliderInput[i]*(-1.0)),-1);
+    }
+  }
+  // console.log(sliderInput);
+  for (i=0;i<5;i++) {
+    var weightMatrixRow = [];
+    for (j=0;j<5;j++) {
+      if (i===j) {
+        weightMatrixRow.push(1);
+      } else if (j>i) {
+        var insert = sliderInput.shift();
+        weightMatrixRow.push(insert);
+      } else {
+        weightMatrixRow.push('');
+      }
+    }
+    weightMatrix.push(weightMatrixRow);
+  }
+  for (i=0;i<weightMatrix.length;i++) {
+    for (j=0;j<weightMatrix.length;j++) {
+      if (weightMatrix[i][j] === "") {
+        weightMatrix[i][j] = Math.pow(weightMatrix[j][i],-1);
+      }
+    }
+  }
+  weightMatrix = multiplyMatrices(weightMatrix,weightMatrix);
+  console.log(weightMatrix);
+  for (i=0;i<weightMatrix.length;i++) {
+    var tempRowSum = 0;
+    for (j=0;j<weightMatrix.length;j++) {
+      tempRowSum += weightMatrix[i][j];
+    }
+    weightRowSum.push(tempRowSum);
+    weightSum += tempRowSum;
+  }
+  for (j=0;j<weightRowSum.length;j++){
+    weightRowSum[j] = weightRowSum[j]/weightSum;
+  }
+  return weightRowSum;
+} // Returns an array of weightings in the order of Academic Excellence, Sports Programs, Arts Programs, Proximity to Home and School Gender
+
+
+$('#inputPostalCode').change(function() {
+  getCoord($('#inputPostalCode').val());
+});
+
+$('#buttonAHP').click(function() {
+  calcWeight();
+});
 
 var test;
