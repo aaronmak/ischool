@@ -104,7 +104,13 @@ noUiSlider.create(slider10, defaultOptions);
 var schoolTableBody = $('#schoolTable tbody');
 
 function pop_SecondarySchools(feature, layer) {
-  var popupContent = toTitleCase(String(feature.properties.School_Name));
+/////popupGraph for each school
+  var div = $('<div class="popupGraph" style="width:100%;height:100%;"><svg/></div>')[0];
+
+  var popupContent = L.popup().setContent(div);
+
+  //var popupContent = toTitleCase(String(feature.properties.School_Name));
+
   layer.bindPopup(popupContent);
 
   ///// School Table
@@ -284,5 +290,3 @@ $('#inputPostalCode').change(function() {
 $('#buttonAHP').click(function() {
   calcWeight();
 });
-
-var test;
