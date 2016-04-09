@@ -102,6 +102,7 @@ noUiSlider.create(slider10, defaultOptions);
 
 ///// Data Source
 var schoolTableBody = $('#schoolTable tbody');
+var schoolPoints = [];
 
 function pop_SecondarySchools(feature, layer) {
   var popupContent = toTitleCase(String(feature.properties.School_Name));
@@ -120,6 +121,14 @@ function pop_SecondarySchools(feature, layer) {
     map.setView(layer.getLatLng(), 15);
     layer.openPopup();
   });
+  // $(document).delegate(lastTr, 'click', function() {
+  //   map.setView(layer.getLatLng(), 15);
+  //   layer.openPopup();
+  // });
+  // $(lastTr).live('click',(function() {
+  //   map.setView(layer.getLatLng(), 15);
+  //   layer.openPopup();
+  // }));
 }
 
 function schoolMarker(feature) {
@@ -135,6 +144,8 @@ var json_SecondarySchools = new L.geoJson(secondarySchools, {
   onEachFeature: pop_SecondarySchools,
   pointToLayer: function(feature, latlng) {
     // console.log(latlng);
+    // schoolsLoc.push(latlng);
+    schoolPoints.push(feature);
     return L.marker(latlng, {
       icon: schoolMarker(feature)
     });
@@ -187,8 +198,6 @@ function getCoord(postalcode) {
     // console.log(url);
     $.getJSON(url)
     .done(function(data) {
-      console.log(data.size);
-      console.log(data);
       if (data.SearchResults.length === 2) {
         var xCoord = parseFloat(data.SearchResults[1].X);
         var yCoord = parseFloat(data.SearchResults[1].Y);
@@ -262,7 +271,6 @@ function calcWeight() {
     }
   }
   weightMatrix = multiplyMatrices(weightMatrix,weightMatrix);
-  console.log(weightMatrix);
   for (i=0;i<weightMatrix.length;i++) {
     var tempRowSum = 0;
     for (j=0;j<weightMatrix.length;j++) {
@@ -277,13 +285,32 @@ function calcWeight() {
   return weightRowSum;
 } // Returns an array of weightings in the order of Academic Excellence, Sports Programs, Arts Programs, Proximity to Home and School Gender
 
+function calcDist() {
+  var homeLoc = homePoint.features[0];
+  var distSchoolsFromHome = {};
+  var units = "kilometers";
+  for (i=0;i<schoolPoints.length;i++) {
+    var distSchoolFromHome = turf.distance(homeLoc,schoolPoints[i],units);
+    distSchoolsFromHome[i] = distSchoolFromHome;
+  }
+  console.log("distance of schools from home: " + distSchoolsFromHome);
+  return (distSchoolsFromHome);
+} // returns an object with key 0-169 and values of distance from home each time this function is called
+
 
 $('#inputPostalCode').change(function() {
   getCoord($('#inputPostalCode').val());
 });
 
 $('#buttonAHP').click(function() {
+  getCoord($('#inputPostalCode').val());
   calcWeight();
+  calcDist(add_hmarker);
 });
+
+// $(document).ready(function() {
+//   $('#schoolTable').dynatable();
+// });
+
 
 var test;
