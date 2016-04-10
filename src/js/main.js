@@ -106,11 +106,76 @@ var schoolPoints = [];
 
 function pop_SecondarySchools(feature, layer) {
 /////popupGraph for each school
+
+  var lineData = [
+  {x:2013,y:feature.properties.Sec1_Express_Median_2013},
+  {x:2014,y:feature.properties.Sec1_Express_Median_2014},
+  {x:2015,y:feature.properties.Sec1_Express_Median_2015}];
+
   var div = $('<div class="popupGraph" style="width:100%;height:100%;"><svg/></div>')[0];
 
   var popupContent = L.popup().setContent(div);
 
   //var popupContent = toTitleCase(String(feature.properties.School_Name));
+
+  var margin = {
+      top: 20,
+      right: 20,
+      bottom: 20,
+      left: 20
+  },
+  width = 300 - margin.left - margin.right,
+  height = 300 - margin.top - margin.bottom;
+
+  var xRange = d3.scale.linear().range([margin.left, width - margin.right])
+  .domain(d3.extent(lineData,function(d){
+    return d.x;
+  })),
+  yRange = d3.scale.linear().range([height - margin.top, margin.bottom]).domain([d3.min(lineData, function(d) {
+    return d.y;
+  })-5, d3.max(lineData, function(d) {
+    return d.y;
+  })]),
+  xAxis = d3.svg.axis()
+    .scale(xRange)
+    .tickValues([2013,2014,2015]),
+  yAxis = d3.svg.axis()
+    .scale(yRange)
+    .orient('left')
+    .tickSubdivide(true);
+
+  var lineFunc = d3.svg.line()
+  .x(function(d) {
+    return xRange(d.x);
+  })
+  .y(function(d) {
+    return yRange(d.y);
+  })
+  .interpolate('linear');
+
+  var svg = d3.select(div)
+  .select("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom)
+  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  svg.append('svg:path')
+  .attr('d', lineFunc(lineData))
+  .attr('stroke', 'blue')
+  .attr('stroke-width', 2)
+  .attr('fill', 'none');
+
+  svg.append('svg:g')
+  .attr('class', 'x axis')
+  .attr('transform', 'translate(0,' + (height - margin.bottom) + ')')
+  /*		.attr("transform", "translate(0," + height + ")")
+  */	  .call(xAxis);
+
+  svg.append('svg:g')
+    .attr('class', 'y axis')
+    .attr('transform', 'translate(' + (margin.left) + ',0)')
+    .style("text-anchor", "end")
+    .call(yAxis);
 
   layer.bindPopup(popupContent);
 
@@ -298,10 +363,78 @@ function calcDist() {
     var distSchoolFromHome = turf.distance(homeLoc,schoolPoints[i],units);
     distSchoolsFromHome[i] = distSchoolFromHome;
   }
-  console.log("distance of schools from home: " + distSchoolsFromHome);
+  //console.log("distance of schools from home: " + distSchoolsFromHome);
   return (distSchoolsFromHome);
 } // returns an object with key 0-169 and values of distance from home each time this function is called
 
+function getValues() {
+  var AcademicList = {};
+  var SportsProgramList = {};
+  var ArtsProgramList = {};
+
+  for(i=0;i<schoolPoints.length;i++){
+    AcademicList[i] = schoolPoints[i].properties.AE;
+    SportsProgramList[i] = schoolPoints[i].properties.SportsPro;
+    ArtsProgramList[i] = schoolPoints[i].properties.ArtProg;
+  }
+  //console.log(AcademicList,SportsProgramList,ArtsProgramList);
+  return [AcademicList,SportsProgramList,ArtsProgramList];
+}
+//Factor 1,2,3,4
+function calcValue(ValueList){
+  var Matrix = [];
+  var Rank = [];
+  var Sum = 0;
+
+  for(i=0;i<170;i++){
+    Sum = Sum + ValueList[i];
+    Matrix.push(ValueList[i]);
+  }
+  for(i=0;i<Matrix.length;i++){
+    temp = Matrix[i]/Sum;
+    Rank.push(temp);
+  }
+  //console.log(Rank);
+  return Rank;
+}
+
+//Factor 5:School Gender
+function calcSG(){
+    var preferGender  = document.getElementById("prefGen").value;
+    var genderMatrix = [];
+    var genderRank = [];
+    var genderMatrixSum = 0;
+    //console.log(preferGender);
+    for(i=0;i<170;i++){
+      if(schoolPoints[i].properties.Gender == preferGender){
+        genderMatrix.push(1);
+        genderMatrixSum = genderMatrixSum + 1;
+      }else {
+        genderMatrix.push(0);
+        genderMatrixSum = genderMatrixSum + 0;
+      }
+    }
+
+    for(i=0;i<genderMatrix.length;i++){
+      temp = genderMatrix[i]/genderMatrixSum;
+      genderRank.push(temp);
+    }
+    //console.log(genderRank);
+    return genderRank;
+}
+
+function calcAHP(RankingMatrix,relaRanking){
+  var finalArray = [];
+  for(i=0;i<170;i++){
+    var tempSum = 0;
+    for(j=0;j<5;j++){
+      tempSum = tempSum + RankingMatrix[j][i]*relaRanking[j];
+      finalArray[i] = tempSum;
+    }
+  }
+  //console.log(finalArray);
+  return finalArray;
+}//returns an object with key 0-169 and values of School's AHP value
 
 $('#inputPostalCode').change(function() {
   getCoord($('#inputPostalCode').val());
@@ -309,16 +442,40 @@ $('#inputPostalCode').change(function() {
 
 $('#buttonAHP').click(function() {
   getCoord($('#inputPostalCode').val());
-  calcWeight();
-  calcDist(add_hmarker);
+  relaRanking = calcWeight();
+
+  var RankingMatrix = [];
+  //Get distance
+  distList = calcDist(add_hmarker);
+  //Get values
+  valueList = getValues();
+  AcademicList = valueList[0];
+  SportsProgramList = valueList[1];
+  ArtsProgramList = valueList[2];
+  //Factor 1:Academic Excellence
+  AcadeExcelRanking = calcValue(AcademicList);
+  RankingMatrix.push(AcadeExcelRanking);
+  //Factor 2:Sports Programs
+  SporProgRanking = calcValue(SportsProgramList);
+  RankingMatrix.push(SporProgRanking);
+  //Factor 3:Arts Programs
+  ArtProgRanking = calcValue(ArtsProgramList);
+  RankingMatrix.push(ArtProgRanking);
+  //Factor 4:Proximity to home
+  DistRanking = calcValue(distList);
+  RankingMatrix.push(DistRanking);
+  //Factor 5:School Gender
+  SGRanking = calcSG();
+  RankingMatrix.push(SGRanking);
+  //console.log(RankingMatrix);
+  //Generate Final Ranking
+  SchoolRanking = calcAHP(RankingMatrix,relaRanking);
 });
-<<<<<<< HEAD
-=======
+//<<<<<<< HEAD
+//=======
 
 // $(document).ready(function() {
 //   $('#schoolTable').dynatable();
 // });
 
-
-var test;
->>>>>>> fe56eb813533ddef174d88f917174193f7dcd000
+//>>>>>>> fe56eb813533ddef174d88f917174193f7dcd000
