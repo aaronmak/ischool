@@ -107,75 +107,131 @@ var schoolPoints = [];
 function pop_SecondarySchools(feature, layer) {
 /////popupGraph for each school
 
-  var lineData = [
-  {x:2013,y:feature.properties.Sec1_Express_Median_2013},
-  {x:2014,y:feature.properties.Sec1_Express_Median_2014},
-  {x:2015,y:feature.properties.Sec1_Express_Median_2015}];
+  // var lineData = [
+  // {x:2013,y:feature.properties.Sec1_Express_Median_2013},
+  // {x:2014,y:feature.properties.Sec1_Express_Median_2014},
+  // {x:2015,y:feature.properties.Sec1_Express_Median_2015}];
+  //
+  // var div = $('<div class="popupGraph" style="width:100%;height:100%;"><svg/></div>')[0];
+  //
+  // var popupContent = L.popup().setContent(div);
+  //
+  // //var popupContent = toTitleCase(String(feature.properties.School_Name));
+  //
+  // var margin = {
+  //     top: 20,
+  //     right: 20,
+  //     bottom: 20,
+  //     left: 20
+  // },
+  // width = 300 - margin.left - margin.right,
+  // height = 300 - margin.top - margin.bottom;
+  //
+  // var xRange = d3.scale.linear().range([margin.left, width - margin.right])
+  // .domain(d3.extent(lineData,function(d){
+  //   return d.x;
+  // })),
+  // yRange = d3.scale.linear().range([height - margin.top, margin.bottom]).domain([d3.min(lineData, function(d) {
+  //   return d.y;
+  // })-5, d3.max(lineData, function(d) {
+  //   return d.y;
+  // })]),
+  // xAxis = d3.svg.axis()
+  //   .scale(xRange)
+  //   .tickValues([2013,2014,2015]),
+  // yAxis = d3.svg.axis()
+  //   .scale(yRange)
+  //   .orient('left')
+  //   .tickSubdivide(true);
+  //
+  // var lineFunc = d3.svg.line()
+  // .x(function(d) {
+  //   return xRange(d.x);
+  // })
+  // .y(function(d) {
+  //   return yRange(d.y);
+  // })
+  // .interpolate('linear');
+  //
+  // var svg = d3.select(div)
+  // .select("svg")
+  // .attr("width", width + margin.left + margin.right)
+  // .attr("height", height + margin.top + margin.bottom)
+  // .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  //
+  // svg.append('svg:path')
+  // .attr('d', lineFunc(lineData))
+  // .attr('stroke', 'blue')
+  // .attr('stroke-width', 2)
+  // .attr('fill', 'none');
+  //
+  // svg.append('svg:g')
+  // .attr('class', 'x axis')
+  // .attr('transform', 'translate(0,' + (height - margin.bottom) + ')')
+  // /*		.attr("transform", "translate(0," + height + ")")
+  // */	  .call(xAxis);
+  //
+  // svg.append('svg:g')
+  //   .attr('class', 'y axis')
+  //   .attr('transform', 'translate(' + (margin.left) + ',0)')
+  //   .style("text-anchor", "end")
+  //   .call(yAxis);
+  //
+  // layer.bindPopup(popupContent);
 
-  var div = $('<div class="popupGraph" style="width:100%;height:100%;"><svg/></div>')[0];
+  var schoolName = toTitleCase(String(feature.properties.School_Name));
 
-  var popupContent = L.popup().setContent(div);
+  var graph = $('<div class="popupGraph" style="width:100%;height:100%;"><svg/></div>')[0];
 
-  //var popupContent = toTitleCase(String(feature.properties.School_Name));
+  var popupContent = L.popup().setContent(graph);
 
-  var margin = {
-      top: 20,
-      right: 20,
-      bottom: 20,
-      left: 20
-  },
-  width = 300 - margin.left - margin.right,
-  height = 300 - margin.top - margin.bottom;
+  var graphColumns = [['x', '2013', '2014', '2015']];
 
-  var xRange = d3.scale.linear().range([margin.left, width - margin.right])
-  .domain(d3.extent(lineData,function(d){
-    return d.x;
-  })),
-  yRange = d3.scale.linear().range([height - margin.top, margin.bottom]).domain([d3.min(lineData, function(d) {
-    return d.y;
-  })-5, d3.max(lineData, function(d) {
-    return d.y;
-  })]),
-  xAxis = d3.svg.axis()
-    .scale(xRange)
-    .tickValues([2013,2014,2015]),
-  yAxis = d3.svg.axis()
-    .scale(yRange)
-    .orient('left')
-    .tickSubdivide(true);
 
-  var lineFunc = d3.svg.line()
-  .x(function(d) {
-    return xRange(d.x);
-  })
-  .y(function(d) {
-    return yRange(d.y);
-  })
-  .interpolate('linear');
+  if (feature.properties['2013 Sec1(Express_Lower)'] || feature.properties['2014 Sec1(Express_Lower)'] || feature.properties['2015 Sec1(Express_Lower)']) {
+    graphColumns.push(['Express Stream', feature.properties['2013 Sec1(Express_Lower)'], feature.properties['2014 Sec1(Express_Lower)'], feature.properties['2015 Sec1(Express_Lower)']]);
+  }
+  if (feature.properties['2013 Sec1(Normal(A)_Lower)'] || feature.properties['2014 Sec1(Normal(A)_Lower)'] || feature.properties['2015 Sec1(Normal(A)_Lower)']) {
+    graphColumns.push(['Normal(A) Stream', feature.properties['2013 Sec1(Normal(A)_Lower)'], feature.properties['2014 Sec1(Normal(A)_Lower)'], feature.properties['2015 Sec1(Normal(A)_Lower)']]);
+  }
+  if (feature.properties['2013 Sec1(Normal(T)_Lower)'] || feature.properties['2014 Sec1(Normal(T)_Lower)'] || feature.properties['2015 Sec1(Normal(T)_Lower)']) {
+    graphColumns.push(['Normal(T) Stream', feature.properties['2013 Sec1(Normal(T)_Lower)'], feature.properties['2014 Sec1(Normal(T)_Lower)'], feature.properties['2015 Sec1(Normal(T)_Lower)']]);
+  }
 
-  var svg = d3.select(div)
-  .select("svg")
-  .attr("width", width + margin.left + margin.right)
-  .attr("height", height + margin.top + margin.bottom)
-  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  var chart = c3.generate({
+    bindto: graph,
+    size: {
+      width: 300,
+      height: 300
+    },
+    data: {
+      x: 'x',
+      columns: graphColumns
+    },
+    axis: {
+      y: {
+        padding: {top: 20, bottom: 20},
+        label: {
+          text: 'PSLE Cut Off Score',
+          position: 'outer-middle'
+        }
+      },
+      x: {
+        padding: {right: 0.1},
+        label: {
+          text: schoolName,
+          position: 'outer-center'
+        },
+        tick: {
+          type: 'timeseries',
+          tick: {
+            format: '%Y'
+          }
+        }
+      }
+    }
+  });
 
-  svg.append('svg:path')
-  .attr('d', lineFunc(lineData))
-  .attr('stroke', 'blue')
-  .attr('stroke-width', 2)
-  .attr('fill', 'none');
-
-  svg.append('svg:g')
-  .attr('class', 'x axis')
-  .attr('transform', 'translate(0,' + (height - margin.bottom) + ')')
-  /*		.attr("transform", "translate(0," + height + ")")
-  */	  .call(xAxis);
-
-  svg.append('svg:g')
-    .attr('class', 'y axis')
-    .attr('transform', 'translate(' + (margin.left) + ',0)')
-    .style("text-anchor", "end")
-    .call(yAxis);
 
   layer.bindPopup(popupContent);
 
@@ -187,7 +243,7 @@ function pop_SecondarySchools(feature, layer) {
   var lastTr = $('#schoolTable tbody tr:last-child');
   lastTr.append(td1,td2);
   td1.innerHTML = toTitleCase(String(feature.properties.School_Name));
-  td2.innerHTML = String(feature.properties.address);
+  td2.innerHTML = toTitleCase(String(feature.properties.address));
   lastTr.click(function() {
     map.setView(layer.getLatLng(), 15);
     layer.openPopup();
