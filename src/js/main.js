@@ -240,12 +240,13 @@ function pop_SecondarySchools(feature, layer) {
   ///// School Table
   var tr = document.createElement('tr');
   var td1 = document.createElement('td');
-  var td2 = document.createElement('td');
+  // var td2 = document.createElement('td');
   var item = schoolTableBody.append(tr);
   var lastTr = $('#schoolTable tbody tr:last-child');
-  lastTr.append(td1,td2);
+  // lastTr.append(td1,td2);
+  lastTr.append(td1);
   td1.innerHTML = toTitleCase(String(feature.properties.School_Name));
-  td2.innerHTML = toTitleCase(String(feature.properties.address));
+  // td2.innerHTML = toTitleCase(String(feature.properties.address));
   lastTr.click(function() {
     map.setView(layer.getLatLng(), 15);
     layer.openPopup();
@@ -503,6 +504,7 @@ $('#buttonAHP').click(function() {
   relaRanking = calcWeight();
 
   var RankingMatrix = [];
+  var schoolRank = [];
   //Get distance
   distList = calcDist(add_hmarker);
   //Get values
@@ -527,8 +529,21 @@ $('#buttonAHP').click(function() {
   RankingMatrix.push(SGRanking);
   //console.log(RankingMatrix);
   //Generate Final Ranking
-  SchoolRanking = calcAHP(RankingMatrix,relaRanking);
-  console.log(SchoolRanking);
+  schoolScore = calcAHP(RankingMatrix,relaRanking);
+  console.log(schoolScore);
+  var schoolScoreDesc = cloneObject(schoolScore);
+  schoolScoreDesc.sort(function(a,b) { return b - a;});
+  for (i=0;i<schoolScore.length;i++) {
+    for (j=0;j<schoolScoreDesc.length;j++) {
+      if (schoolScore[i] === schoolScoreDesc[j]) {
+        schoolRank.push(j+1);
+      }
+    }
+  }
+  console.log(schoolRank);
+  for (i=0;i<schoolRank.length;i++) {
+    $('#schoolTable tbody tr:nth-child('+(i+1)+')').prepend('<td>'+schoolRank[i]+'</td>');
+  }
 });
 //<<<<<<< HEAD
 //=======
