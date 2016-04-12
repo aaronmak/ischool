@@ -210,6 +210,8 @@ function pop_SecondarySchools(feature, layer) {
     },
     axis: {
       y: {
+        max: 300,
+        min: 100,
         padding: {top: 20, bottom: 20},
         label: {
           text: 'PSLE Cut Off Score',
@@ -526,6 +528,7 @@ $('#buttonAHP').click(function() {
   //console.log(RankingMatrix);
   //Generate Final Ranking
   SchoolRanking = calcAHP(RankingMatrix,relaRanking);
+  console.log(SchoolRanking);
 });
 //<<<<<<< HEAD
 //=======
