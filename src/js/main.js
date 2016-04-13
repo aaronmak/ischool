@@ -349,6 +349,7 @@ function calcDist() {
   for (i=0;i<schoolPoints.length;i++) {
     var distSchoolFromHome = turf.distance(homeLoc,schoolPoints[i],units);
     distSchoolsFromHome[i] = 1/distSchoolFromHome;
+    //Using 1/distSchoolFromHome instead raw distSchoolFromHome
   }
   return (distSchoolsFromHome);
 } // returns an object with key 0-169 and values of distance from home each time this function is called
