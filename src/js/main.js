@@ -475,7 +475,7 @@ function calcSG(){
       temp = genderMatrix[i]/genderMatrixSum;
       genderRank.push(temp);
     }
-    //console.log(genderRank);
+    console.log(genderRank);
     return genderRank;
 }
 
@@ -485,8 +485,8 @@ function calcAHP(RankingMatrix,relaRanking){
     var tempSum = 0;
     for(j=0;j<5;j++){
       tempSum = tempSum + RankingMatrix[j][i]*relaRanking[j];
-      finalArray[i] = tempSum;
     }
+    finalArray[i] = tempSum;
   }
   //console.log(finalArray);
   return finalArray;
@@ -523,7 +523,7 @@ $('#buttonAHP').click(function() {
   //Factor 5:School Gender
   SGRanking = calcSG();
   RankingMatrix.push(SGRanking);
-  //console.log(RankingMatrix);
+  console.log(RankingMatrix);
   //Generate Final Ranking
   SchoolRanking = calcAHP(RankingMatrix,relaRanking);
 });
