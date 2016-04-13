@@ -331,7 +331,7 @@ function calcWeight() {
   for (i=0;i<weightMatrix.length;i++) {
     var tempRowSum = 0;
     for (j=0;j<weightMatrix.length;j++) {
-      tempRowSum += weightMatrix[i][j];
+      tempRowSum += weightMatrix[j][i];
     }
     weightRowSum.push(tempRowSum);
     weightSum += tempRowSum;
@@ -350,7 +350,6 @@ function calcDist() {
     var distSchoolFromHome = turf.distance(homeLoc,schoolPoints[i],units);
     distSchoolsFromHome[i] = 1/distSchoolFromHome;
   }
-  //console.log("distance of schools from home: " + distSchoolsFromHome);
   return (distSchoolsFromHome);
 } // returns an object with key 0-169 and values of distance from home each time this function is called
 
@@ -364,7 +363,6 @@ function getValues() {
     SportsProgramList[i] = schoolPoints[i].properties.SportsPro;
     ArtsProgramList[i] = schoolPoints[i].properties.ArtProg;
   }
-  //console.log(AcademicList,SportsProgramList,ArtsProgramList);
   return [AcademicList,SportsProgramList,ArtsProgramList];
 }
 //Factor 1,2,3,4
@@ -381,7 +379,6 @@ function calcValue(ValueList){
     temp = Matrix[i]/Sum;
     Rank.push(temp);
   }
-  //console.log(Rank);
   return Rank;
 }
 
@@ -406,7 +403,6 @@ function calcSG(){
       temp = genderMatrix[i]/genderMatrixSum;
       genderRank.push(temp);
     }
-    console.log(genderRank);
     return genderRank;
 }
 
@@ -419,7 +415,6 @@ function calcAHP(RankingMatrix,relaRanking){
     }
     finalArray[i] = tempSum;
   }
-  //console.log(finalArray);
   return finalArray;
 }//returns an object with key 0-169 and values of School's AHP value
 
@@ -455,10 +450,8 @@ $('#buttonAHP').click(function() {
   //Factor 5:School Gender
   SGRanking = calcSG();
   RankingMatrix.push(SGRanking);
-  console.log(RankingMatrix);
   //Generate Final Ranking
   schoolScore = calcAHP(RankingMatrix,relaRanking);
-  console.log(schoolScore);
   var schoolScoreDesc = cloneObject(schoolScore);
   schoolScoreDesc.sort(function(a,b) { return b - a;});
   for (i=0;i<schoolScore.length;i++) {
@@ -468,16 +461,7 @@ $('#buttonAHP').click(function() {
       }
     }
   }
-  console.log(schoolRank);
   for (i=0;i<schoolRank.length;i++) {
     $('#schoolTable tbody tr:nth-child('+(i+1)+')').prepend('<td>'+schoolRank[i]+'</td>');
   }
 });
-//<<<<<<< HEAD
-//=======
-
-// $(document).ready(function() {
-//   $('#schoolTable').dynatable();
-// });
-
-//>>>>>>> fe56eb813533ddef174d88f917174193f7dcd000
