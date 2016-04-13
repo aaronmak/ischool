@@ -39,6 +39,36 @@ function cloneObject(obj) {
     return temp;
 }
 
+function sortTable(table, order) {
+    var asc   = order === 'asc',
+        tbody = table.find('tbody');
+
+    tbody.find('tr').sort(function(a, b) {
+      // console.log($('td:first').html());
+      var val1 = $('td:first', a).html();
+      var val2 = $('td:first', b).html();
+        if (asc) {
+            return val1-val2;
+        } else {
+            return val2-val1;
+        }
+    }).appendTo(tbody);
+}
+
+function sortTableAsc(table) {
+  var tbody = table.find('tbody');
+  var originalOrder = tbody.find('tr').clone(true,true);
+  var ascOrder = [];
+  for (i=0;i<originalOrder.length;i++) {
+    for (j=0;j<originalOrder.length;j++) {
+      if (parseInt($('td:first',originalOrder[j]).html()) === (i+1)) {
+        ascOrder.push(originalOrder[j]);
+      }
+    }
+  }
+  tbody.html($(ascOrder).clone(true,true));
+}
+
 // Map Init
 
 var map = L.map('map', {
@@ -179,14 +209,6 @@ function pop_SecondarySchools(feature, layer) {
     map.setView(layer.getLatLng(), 15);
     layer.openPopup();
   });
-  // $(document).delegate(lastTr, 'click', function() {
-  //   map.setView(layer.getLatLng(), 15);
-  //   layer.openPopup();
-  // });
-  // $(lastTr).live('click',(function() {
-  //   map.setView(layer.getLatLng(), 15);
-  //   layer.openPopup();
-  // }));
 }
 
 function schoolMarker(feature) {
@@ -279,6 +301,8 @@ function getCoord(postalcode) {
     });
   });
 }
+
+var originalTable = $('#schoolTable').clone(true,true);
 
 function calcWeight() {
   var sliderInput = [];
@@ -452,17 +476,22 @@ $('#buttonAHP').click(function() {
   SGRanking = calcSG();
   RankingMatrix.push(SGRanking);
   //Generate Final Ranking
+  console.log(relaRanking);
+  console.log(RankingMatrix);
   schoolScore = calcAHP(RankingMatrix,relaRanking);
+  console.log(schoolScore);
   var schoolScoreDesc = cloneObject(schoolScore);
   schoolScoreDesc.sort(function(a,b) { return b - a;});
   for (i=0;i<schoolScore.length;i++) {
     for (j=0;j<schoolScoreDesc.length;j++) {
       if (schoolScore[i] === schoolScoreDesc[j]) {
-        schoolRank.push(j+1);
+        schoolRank.push(j+1); // since rank starts from 1, not 0
       }
     }
   }
+  $('#schoolTable').html(originalTable.clone(true,true)); // reset table
   for (i=0;i<schoolRank.length;i++) {
     $('#schoolTable tbody tr:nth-child('+(i+1)+')').prepend('<td>'+schoolRank[i]+'</td>');
   }
+  sortTableAsc($('#schoolTable'));
 });
