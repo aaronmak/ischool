@@ -504,4 +504,9 @@ $('#buttonAHP').click(function() {
     $('#schoolTable tbody tr:nth-child('+(i+1)+')').append('<td>'+ Math.round(oriDist[i]*1000) + '</td>');
   }
   sortTableAsc($('#schoolTable'));
+  $('.sidebar-tabs ul li').removeClass('active');
+  $('.sidebar-content div').removeClass('active');
+  $('.sidebar-tabs ul li:first-child').removeClass('disabled');
+  $('.sidebar-tabs ul li:first-child').addClass('active');
+  $('.sidebar-content div:first-child').addClass('active');
 });
