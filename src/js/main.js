@@ -368,15 +368,23 @@ function calcWeight() {
 
 function calcDist() {
   var homeLoc = homePoint.features[0];
-  var distSchoolsFromHome = {};
+  var distSchoolsFromHome = [];
   var units = "kilometers";
   for (i=0;i<schoolPoints.length;i++) {
     var distSchoolFromHome = turf.distance(homeLoc,schoolPoints[i],units);
-    distSchoolsFromHome[i] = 1/distSchoolFromHome;
+    distSchoolsFromHome[i] = distSchoolFromHome;
     //Using 1/distSchoolFromHome instead raw distSchoolFromHome
   }
   return (distSchoolsFromHome);
-} // returns an object with key 0-169 and values of distance from home each time this function is called
+} // returns an array with key 0-169 and values of distance from home each time this function is called
+
+function inverseArr(array) {
+  var invArr = [];
+  for (i=0;i<array.length;i++) {
+    invArr.push(1/array[i]);
+  }
+  return invArr;
+}
 
 function getValues() {
   var AcademicList = {};
@@ -453,8 +461,9 @@ $('#buttonAHP').click(function() {
 
   var RankingMatrix = [];
   var schoolRank = [];
-  //Get distance
-  distList = calcDist(add_hmarker);
+  //Get inverse distance
+  var oriDist = calcDist(add_hmarker);
+  var distList = inverseArr(oriDist);
   //Get values
   valueList = getValues();
   AcademicList = valueList[0];
@@ -492,6 +501,7 @@ $('#buttonAHP').click(function() {
   $('#schoolTable').html(originalTable.clone(true,true)); // reset table
   for (i=0;i<schoolRank.length;i++) {
     $('#schoolTable tbody tr:nth-child('+(i+1)+')').prepend('<td>'+schoolRank[i]+'</td>');
+    $('#schoolTable tbody tr:nth-child('+(i+1)+')').append('<td>'+ Math.round(oriDist[i]*1000) + '</td>');
   }
   sortTableAsc($('#schoolTable'));
 });
