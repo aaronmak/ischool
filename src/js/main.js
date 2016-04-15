@@ -138,22 +138,24 @@ function pop_SecondarySchools(feature, layer) {
 /////popupGraph for each school
 
   var schoolName = toTitleCase(String(feature.properties.School_Name));
-
+  var cutOffPointE = feature.properties['2017 Expected(Express_Lower)'] ? String(feature.properties['2017 Expected(Express_Lower)']) : '-';
+  var cutOffPointA = feature.properties['2017 Expected(Normal(A)_Lower)'] ? String(feature.properties['2017 Expected(Normal(A)_Lower)']) : '-';
+  var cutOffPointT = feature.properties['2017 Expected(Normal(T)_Lower)'] ? String(feature.properties['2017 Expected(Normal(T)_Lower)']) : '-';
   var graph = $('<div class="popupGraph" style="width:100%;height:100%;"><svg/></div>')[0];
 
   var popupContent = L.popup().setContent(graph);
 
-  var graphColumns = [['x', '2013', '2014', '2015']];
+  var graphColumns = [['x', '2014', '2015', '2016']];
 
 
-  if (feature.properties['2013 Sec1(Express_Lower)'] || feature.properties['2014 Sec1(Express_Lower)'] || feature.properties['2015 Sec1(Express_Lower)']) {
-    graphColumns.push(['Express Stream', feature.properties['2013 Sec1(Express_Lower)'], feature.properties['2014 Sec1(Express_Lower)'], feature.properties['2015 Sec1(Express_Lower)']]);
+  if (feature.properties['2016 Sec1(Express_Lower)'] || feature.properties['2014 Sec1(Express_Lower)'] || feature.properties['2015 Sec1(Express_Lower)']) {
+    graphColumns.push(['Express Stream', feature.properties['2014 Sec1(Express_Lower)'], feature.properties['2015 Sec1(Express_Lower)'], feature.properties['2016 Sec1(Express_Lower)']]);
   }
-  if (feature.properties['2013 Sec1(Normal(A)_Lower)'] || feature.properties['2014 Sec1(Normal(A)_Lower)'] || feature.properties['2015 Sec1(Normal(A)_Lower)']) {
-    graphColumns.push(['Normal(A) Stream', feature.properties['2013 Sec1(Normal(A)_Lower)'], feature.properties['2014 Sec1(Normal(A)_Lower)'], feature.properties['2015 Sec1(Normal(A)_Lower)']]);
+  if (feature.properties['2016 Sec1(Normal(A)_Lower)'] || feature.properties['2014 Sec1(Normal(A)_Lower)'] || feature.properties['2015 Sec1(Normal(A)_Lower)']) {
+    graphColumns.push(['Normal(A) Stream', feature.properties['2014 Sec1(Normal(A)_Lower)'], feature.properties['2015 Sec1(Normal(A)_Lower)'], feature.properties['2016 Sec1(Normal(A)_Lower)']]);
   }
-  if (feature.properties['2013 Sec1(Normal(T)_Lower)'] || feature.properties['2014 Sec1(Normal(T)_Lower)'] || feature.properties['2015 Sec1(Normal(T)_Lower)']) {
-    graphColumns.push(['Normal(T) Stream', feature.properties['2013 Sec1(Normal(T)_Lower)'], feature.properties['2014 Sec1(Normal(T)_Lower)'], feature.properties['2015 Sec1(Normal(T)_Lower)']]);
+  if (feature.properties['2016 Sec1(Normal(T)_Lower)'] || feature.properties['2014 Sec1(Normal(T)_Lower)'] || feature.properties['2015 Sec1(Normal(T)_Lower)']) {
+    graphColumns.push(['Normal(T) Stream', feature.properties['2014 Sec1(Normal(T)_Lower)'], feature.properties['2015 Sec1(Normal(T)_Lower)'], feature.properties['2016 Sec1(Normal(T)_Lower)']]);
   }
 
   var chart = c3.generate({
@@ -198,13 +200,18 @@ function pop_SecondarySchools(feature, layer) {
   ///// School Table
   var tr = document.createElement('tr');
   var td1 = document.createElement('td');
-  // var td2 = document.createElement('td');
+  var td2 = document.createElement('td');
+  var td3 = document.createElement('td');
+  var td4 = document.createElement('td');
   var item = schoolTableBody.append(tr);
   var lastTr = $('#schoolTable tbody tr:last-child');
   // lastTr.append(td1,td2);
-  lastTr.append(td1);
-  td1.innerHTML = toTitleCase(String(feature.properties.School_Name));
-  // td2.innerHTML = toTitleCase(String(feature.properties.address));
+  lastTr.append(td1,td2,td3,td4);
+  td1.innerHTML = schoolName;
+  td2.innerHTML = cutOffPointE;
+  td3.innerHTML = cutOffPointA;
+  td4.innerHTML = cutOffPointT;
+
   lastTr.click(function() {
     map.setView(layer.getLatLng(), 15);
     layer.openPopup();
@@ -485,10 +492,7 @@ $('#buttonAHP').click(function() {
   SGRanking = calcSG();
   RankingMatrix.push(SGRanking);
   //Generate Final Ranking
-  console.log(relaRanking);
-  console.log(RankingMatrix);
   schoolScore = calcAHP(RankingMatrix,relaRanking);
-  console.log(schoolScore);
   var schoolScoreDesc = cloneObject(schoolScore);
   schoolScoreDesc.sort(function(a,b) { return b - a;});
   for (i=0;i<schoolScore.length;i++) {
@@ -504,9 +508,31 @@ $('#buttonAHP').click(function() {
     $('#schoolTable tbody tr:nth-child('+(i+1)+')').append('<td>'+ Math.round(oriDist[i]*1000) + '</td>');
   }
   sortTableAsc($('#schoolTable'));
+  for (i=0;i<9;i++){
+    console.log($._data($('#schoolTable tbody tr:nth-child('+(i+1)+')')[0],'events'));
+  }
   $('.sidebar-tabs ul li').removeClass('active');
   $('.sidebar-content div').removeClass('active');
   $('.sidebar-tabs ul li:first-child').removeClass('disabled');
   $('.sidebar-tabs ul li:first-child').addClass('active');
   $('.sidebar-content div:first-child').addClass('active');
+  $('#schoolTable tr td:nth-child(3)').show();
+});
+
+// Stream Input
+$('#schoolTable tr td:nth-child(3)').show();
+$('#streamInput').change(function() {
+  if ($('#streamInput').val() === 'express') {
+    $('#schoolTable tr td:nth-child(3)').show();
+    $('#schoolTable tr td:nth-child(4)').hide();
+    $('#schoolTable tr td:nth-child(5)').hide();
+  } else if ($('#streamInput').val() === 'normalAcad') {
+    $('#schoolTable tr td:nth-child(4)').show();
+    $('#schoolTable tr td:nth-child(3)').hide();
+    $('#schoolTable tr td:nth-child(5)').hide();
+  } else {
+    $('#schoolTable tr td:nth-child(5)').show();
+    $('#schoolTable tr td:nth-child(3)').hide();
+    $('#schoolTable tr td:nth-child(4)').hide();
+  }
 });

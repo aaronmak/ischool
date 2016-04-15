@@ -78,7 +78,13 @@ html, body, #map {
   .sidebar {
     width: 45%; } }
 #schoolTable tr:hover {
-  background: #f4f4f4; }
+  background: #f4f4f4;
+  cursor: pointer; }
+#schoolTable tr td:nth-child(3), #schoolTable tr td:nth-child(4), #schoolTable tr td:nth-child(5) {
+  display: none; }
+
+.noUi-handle {
+  cursor: pointer; }
 
 #ahp .button {
   margin: 30px 0; }

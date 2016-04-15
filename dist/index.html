@@ -43,14 +43,28 @@
                     <span class="sidebar-close"><i class="fa fa-caret-right"></i></span>
                     Schools
                 </h1>
-                <p>
-                </p>
+                <div class="row">
+                  <div class="six columns">
+                    <label for="psleScore">PSLE Score</label>
+                    <input class="u-full-width" id="psleScore" type="number">
+                  </div>
+                  <div class="six columns">
+                    <label for="streamInput">Stream</label>
+                    <select class="u-full-width" id="streamInput">
+                      <option value="express">Express</option>
+                      <option value="normalAcad">Normal Academic</option>
+                      <option value="normalTech">Normal Technical</option>
+                    </select>
+                  </div>
+                </div>
                 <table id="schoolTable">
                   <thead>
                     <tr>
                       <th data-sort="int">Rank</th>
                       <th>School Name</th>
+                      <th>Predicted Cut-Off Point</th>
                       <th>Meters from Home/Work</th>
+                      <th>Success?</th>
                     </tr>
                   </thead>
                   <tbody>
