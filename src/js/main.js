@@ -291,7 +291,7 @@ function getCoord(postalcode) {
     getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=xkg8VRu6Ol+gMH+SUamkRIEB7fKzhwMvfMo/2U8UJcFhdvR4yN1GutmUIA3A6r3LDhot215OVVkZvNRzjl28TNUZgYFSswOi';
   }
   var token = '';
-  // console.log('getTokenURL: ' + getTokenURL);
+  console.log('getTokenURL: ' + getTokenURL);
   $.getJSON(getTokenURL)
   .done(function(data){
     token = data.GetToken[0].NewToken;
