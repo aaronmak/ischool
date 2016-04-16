@@ -100,19 +100,19 @@ map.addControl(sidebar);
 var info = L.control({position: 'bottomleft'});
 
 info.onAdd = function (map) {
-    this._div = L.DomUtil.create('div', 'school_info'); // create a div with a class "info"
+    this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
     this.update();
     return this._div;
 };
 // method that we will use to update the control based on feature properties passed
 info.update = function (props) {
-    this._div.innerHTML = '<h4>School Information</h4>';
+    this._div.innerHTML = '<h4>School Information</h4>'+  (props ?
+        '<b>' + props.School_Name + '</b><br />' + props.Gender + ' people / mi<sup>2</sup>'
+        : 'Hover over a state');
 };
-
 info.addTo(map);
 
 ////// Sliders
-
 var defaultOptions = {
   start: 0,
   step: 1,
@@ -151,7 +151,16 @@ var schoolPoints = [];
 
 function pop_SecondarySchools(feature, layer) {
 /////popupGraph for each school
-
+//Routing machine
+/*  L.Routing.control({
+      waypoints: [
+          L.latLng(feature.properties.long,feature.properties.lan),
+          L.latLng(homeCoord.xCoord, homeCoord.yCoord),
+      ],
+      routeWhileDragging: true
+  }).addTo(map);
+*/
+  info.update(layer.feature.properties);
   var schoolName = toTitleCase(String(feature.properties.School_Name));
   var cutOffPointE = feature.properties['2017 Expected(Express_Lower)'] ? String(feature.properties['2017 Expected(Express_Lower)']) : '-';
   var cutOffPointA = feature.properties['2017 Expected(Normal(A)_Lower)'] ? String(feature.properties['2017 Expected(Normal(A)_Lower)']) : '-';
@@ -272,35 +281,9 @@ function schoolMarker(feature) {
   });
   return marker;
 }
-var highlightMarker = L.MakiMarkers.icon({
-  icon: "college",
-  color: "#de2d26",
-  size: "l"
-});
-
-var defaultMarker = L.MakiMarkers.icon({
-  icon: "college",
-  color: "#474747",
-  size: "m"
-});
-
-function highlightFeature(e){
-  var layer = e.target;
-  layer.setStyle({
-    icon: "college",
-    color: "#de2d26",
-    size: "l"
-  });
-}
-function resetFeature(e){
-  var layer = e.target;
-  layer.setStyle(defaultMarker);
-}
 
 function onEachFeature(feature,layer){
   layer.on({
-    mouseover: highlightFeature,
-    mouseout: resetFeature,
     click: pop_SecondarySchools(feature,layer)
   });
 }
