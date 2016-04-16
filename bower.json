@@ -27,8 +27,8 @@
     "sidebar-v2": "^0.3.0",
     "nouislider": "^8.3.0",
     "Leaflet.MakiMarkers": "^1.0.1",
-    "dynatable": "^0.3.1",
-    "d3": "^3.5.16"
+    "d3": "^3.5.16",
+    "StickyTableHeaders": "^0.1.19"
   },
   "resolutions": {
     "jquery": "~2.2.2"
