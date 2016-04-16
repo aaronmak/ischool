@@ -13,6 +13,12 @@ module.exports = function (grunt) {
 
     grunt.initConfig({
       pkg: grunt.file.readJSON('package.json'),
+      gh-pages: {
+        options: {
+          base: 'dist'
+        },
+        src: ['**']
+      },
       bower_concat: {
         all: {
           dest: {
