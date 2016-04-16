@@ -286,7 +286,7 @@ function homeMarker(feature) {
 
 function getCoord(postalcode) {
   if (add_hmarker) {map.removeLayer(add_hmarker);} // to remove old marker
-  var getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=0+nU5hAyy+NgqVpO3mepHsmZ1r6d+LI49ib3TUJuO9mG+HraaLvzEmEjXCdpYzyL14cwxTLFj6Jgc1EMIUClbdsmU/Egnr44bte4m9ecFNv2Rj99njfzrw==|mv73ZvjFcSo=';
+  var getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=j6/Rfby70oVeYjQxxA2ZsgGpk+VKBUyP6mhmDVQmu+NQVW0ylJG6K0/MgUI8B49FH0A0Fs7Nb5Nb/2PcjolCcwNGytg/J27TSXxrkWgeAqYM0qi2ManejNlLmtuP6c/g|mv73ZvjFcSo=';
   if (document.location.hostname == "localhost") {
     getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=xkg8VRu6Ol+gMH+SUamkRIEB7fKzhwMvfMo/2U8UJcFhdvR4yN1GutmUIA3A6r3LDhot215OVVkZvNRzjl28TNUZgYFSswOi';
   }
