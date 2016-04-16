@@ -77,16 +77,48 @@ html, body, #map {
 @media (min-width: 1200px) {
   .sidebar {
     width: 45%; } }
-#schoolTable tr:hover {
-  background: #f4f4f4;
-  cursor: pointer; }
-#schoolTable tr td:nth-child(3), #schoolTable tr td:nth-child(4), #schoolTable tr td:nth-child(5) {
-  display: none; }
-
 .noUi-handle {
   cursor: pointer; }
 
 #ahp .button {
   margin: 30px 0; }
+
+h1.sidebar-header {
+  margin-bottom: 20px;
+  font-weight: 700; }
+
+#schoolTable {
+  margin-bottom: 2rem;
+  margin-left: -10px;
+  margin-right: -10px; }
+  #schoolTable tr:hover {
+    background: #f4f4f4;
+    cursor: pointer; }
+  #schoolTable tr td:nth-child(3), #schoolTable tr td:nth-child(4), #schoolTable tr td:nth-child(5) {
+    display: none; }
+  #schoolTable th {
+    background: #0074d9;
+    color: #fff; }
+  #schoolTable th:first-child, #schoolTable td:first-child {
+    padding-left: 12px; }
+  #schoolTable th:last-child, #schoolTable td:last-child {
+    padding-right: 12px; }
+
+.button.button-primary, button.button-primary, input[type=button].button-primary, input[type=reset].button-primary, input[type=submit].button-primary {
+  background-color: #0074d9;
+  border-color: #0074d9; }
+  .button.button-primary:hover, button.button-primary:hover, input[type=button].button-primary:hover, input[type=reset].button-primary:hover, input[type=submit].button-primary:hover {
+    background-color: #0059a6;
+    border-color: #0059a6; }
+
+.slider-pane > .slider-label-container:first-child {
+  margin-top: 10px; }
+
+.slider-instruction {
+  margin-top: 10px;
+  margin-bottom: -20px; }
+
+.sidebar-tabs ul li:first-child {
+  display: none; }
 
 /*# sourceMappingURL=main.css.map */

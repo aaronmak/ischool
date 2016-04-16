@@ -193,11 +193,6 @@ function pop_SecondarySchools(feature, layer) {
     graphColumns.push(normalACol);
   }
   if (feature.properties['2016 Sec1(Normal(T)_Lower)'] || feature.properties['2014 Sec1(Normal(T)_Lower)'] || feature.properties['2015 Sec1(Normal(T)_Lower)']) {
-    // if (feature.properties['2016 Sec1(Normal(T)_Lower)']) {
-    //   graphColumns.push(['Normal(T) Stream', feature.properties['2014 Sec1(Normal(T)_Lower)'], feature.properties['2015 Sec1(Normal(T)_Lower)'], feature.properties['2016 Sec1(Normal(T)_Lower)'], feature.properties['2017 Expected(Normal(T)_Lower)']]);
-    // } else {
-    //   graphColumns.push(['Normal(T) Stream', feature.properties['2014 Sec1(Normal(T)_Lower)'], feature.properties['2015 Sec1(Normal(T)_Lower)'], feature.properties['2016 Sec1(Normal(T)_Lower)']]);
-    // }
     var normalTCol = ['Normal(T) Stream'];
     if (feature.properties['2014 Sec1(Normal(T)_Lower)']) {normalTCol.push(feature.properties['2014 Sec1(Normal(T)_Lower)']);}
     if (feature.properties['2015 Sec1(Normal(T)_Lower)']) {normalTCol.push(feature.properties['2015 Sec1(Normal(T)_Lower)']);}
@@ -526,7 +521,6 @@ $('#inputPostalCode').change(function() {
 $('#buttonAHP').click(function() {
   getCoord($('#inputPostalCode').val());
   relaRanking = calcWeight();
-
   var RankingMatrix = [];
   var schoolRank = [];
   //Get inverse distance
@@ -569,25 +563,29 @@ $('#buttonAHP').click(function() {
     $('#schoolTable tbody tr:nth-child('+(i+1)+')').append('<td>'+ Math.round(oriDist[i]*1000) + '</td>');
   }
   sortTableAsc($('#schoolTable'));
-  for (i=0;i<9;i++){
-    console.log($._data($('#schoolTable tbody tr:nth-child('+(i+1)+')')[0],'events'));
-  }
   $('.sidebar-tabs ul li').removeClass('active');
   $('.sidebar-content div').removeClass('active');
   $('.sidebar-tabs ul li:first-child').removeClass('disabled');
   $('.sidebar-tabs ul li:first-child').addClass('active');
   $('.sidebar-content div:first-child').addClass('active');
   $('#schoolTable tr td:nth-child(3)').show();
+  $('.sidebar-tabs ul li:first-child').show();
+
+  $('#schoolTable tbody tr').append('<td>?</td>');
+  calcSuccess();
+  boldTableResult();
 });
 
 // Stream Input
+var streamInput = $('#streamInput');
 $('#schoolTable tr td:nth-child(3)').show();
-$('#streamInput').change(function() {
-  if ($('#streamInput').val() === 'express') {
+streamInput.change(function() {
+  calcSuccess();
+  if (streamInput.val() === 'express') {
     $('#schoolTable tr td:nth-child(3)').show();
     $('#schoolTable tr td:nth-child(4)').hide();
     $('#schoolTable tr td:nth-child(5)').hide();
-  } else if ($('#streamInput').val() === 'normalAcad') {
+  } else if (streamInput.val() === 'normalAcad') {
     $('#schoolTable tr td:nth-child(4)').show();
     $('#schoolTable tr td:nth-child(3)').hide();
     $('#schoolTable tr td:nth-child(5)').hide();
@@ -597,3 +595,57 @@ $('#streamInput').change(function() {
     $('#schoolTable tr td:nth-child(4)').hide();
   }
 });
+
+// PSLE score Input
+
+function calcSuccess(){
+  var psleScore = parseInt($('#psleScore').val());
+  if (psleScore > 300) {
+    $('#psleScore').val(function(){
+      return 300;
+    });
+  }
+  var scoresToCompare = [];
+  var result = [];
+  if (streamInput.val() === 'express') {
+    for (i=0;i<schoolPoints.length;i++) {
+      scoresToCompare.push(parseInt($('#schoolTable tr:nth-child('+(i+1)+') td:nth-child(3)').html()));
+    }
+  } else if (streamInput.val() === 'normalAcad') {
+    for (i=0;i<schoolPoints.length;i++) {
+      scoresToCompare.push(parseInt($('#schoolTable tr:nth-child('+(i+1)+') td:nth-child(4)').html()));
+    }
+  } else {
+    for (i=0;i<schoolPoints.length;i++) {
+      scoresToCompare.push(parseInt($('#schoolTable tr:nth-child('+(i+1)+') td:nth-child(5)').html()));
+    }
+  }
+  for (i=0; i<scoresToCompare.length; i++) {
+    if (isNaN(scoresToCompare[i])){
+      result.push('-');
+    } else if (psleScore < scoresToCompare[i]) {
+      result.push('No');
+    } else if (psleScore >= scoresToCompare[i]){
+      result.push('Yes');
+    } else {
+      return;
+    }
+  }
+  if ($('#schoolTable tbody tr td:nth-child(7)').html()) {
+    $('#schoolTable tbody tr td:nth-child(7)').remove();
+  }
+  for (i=0;i<result.length;i++) {
+    $('#schoolTable tbody tr:nth-child('+(i+1)+')').append('<td>'+ result[i] + '</td>');
+  }
+  boldTableResult();
+}
+
+$('#psleScore').change(function() {
+  calcSuccess();
+});
+
+function boldTableResult() {
+  $('table tr td:nth-child(7):contains("Yes")').parent().css('font-weight','700');
+  $('table tr td:nth-child(7):contains("No")').parent().css('font-weight','400');
+  $('table tr td:nth-child(7):contains("-")').parent().css('font-weight','400');
+}
