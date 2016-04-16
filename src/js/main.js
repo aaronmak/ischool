@@ -232,13 +232,13 @@ function highlightFeature(e){
     icon: "college",
     color: "#474747",
     size: "l"
-  })
+  });
   layer.setStyle({
     });
 }
 function onEachFeature(feature,layer){
   layer.on({
-    mouseover: highlightFeature,
+    //mouseover: highlightFeature,
     click: pop_SecondarySchools(feature,layer)
   });
 }
@@ -247,7 +247,7 @@ var json_SecondarySchools = new L.geoJson(secondarySchools, {
   onEachFeature:onEachFeature,
   pointToLayer: function(feature, latlng) {
     // console.log(latlng);
-    // schoolsLoc.push(latlng);
+    //schoolsLoc.push(latlng);
     schoolPoints.push(feature);
     return L.marker(latlng, {
       icon: schoolMarker(feature)
