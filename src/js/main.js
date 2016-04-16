@@ -108,7 +108,7 @@ info.onAdd = function (map) {
 info.update = function (props) {
     this._div.innerHTML = '<h4>School Information</h4>'+  (props ?
         '<b>' + props.School_Name + '</b><br />' + props.Gender + ' people / mi<sup>2</sup>'
-        : 'Hover over a state');
+        : 'Click a school');
 };
 info.addTo(map);
 
@@ -154,18 +154,19 @@ noUiSlider.create(slider10, defaultOptions);
 var schoolTableBody = $('#schoolTable tbody');
 var schoolPoints = [];
 
+var highlightmarker = L.MakiMarkers.icon({
+  icon: "college",
+  color: "#de2d26",
+  size: "m"
+});
+
 function pop_SecondarySchools(feature, layer) {
 /////popupGraph for each school
-//Routing machine
-/*  L.Routing.control({
-      waypoints: [
-          L.latLng(feature.properties.long,feature.properties.lan),
-          L.latLng(homeCoord.xCoord, homeCoord.yCoord),
-      ],
-      routeWhileDragging: true
-  }).addTo(map);
-*/
-  info.update(layer.feature.properties);
+
+  ///Update the marker
+  ///Update info control
+//  info.update(layer.feature.properties);
+
   var schoolName = toTitleCase(String(feature.properties.School_Name));
   var cutOffPointE = feature.properties['2017 Expected(Express_Lower)'] ? String(feature.properties['2017 Expected(Express_Lower)']) : '-';
   var cutOffPointA = feature.properties['2017 Expected(Normal(A)_Lower)'] ? String(feature.properties['2017 Expected(Normal(A)_Lower)']) : '-';
