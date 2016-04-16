@@ -105,6 +105,11 @@ var defaultOptions = {
   range: {
     'min': -3,
     'max': 3
+  },
+  pips: {
+    mode: 'count',
+    values: 7,
+    density: 7
   }
 };
 
