@@ -96,6 +96,21 @@ var sidebar = L.control.sidebar('sidebar-control', {
 
 map.addControl(sidebar);
 
+//////Control for school point
+var info = L.control({position: 'bottomleft'});
+
+info.onAdd = function (map) {
+    this._div = L.DomUtil.create('div', 'school_info'); // create a div with a class "info"
+    this.update();
+    return this._div;
+};
+// method that we will use to update the control based on feature properties passed
+info.update = function (props) {
+    this._div.innerHTML = '<h4>School Information</h4>';
+};
+
+info.addTo(map);
+
 ////// Sliders
 
 var defaultOptions = {
@@ -226,19 +241,35 @@ function schoolMarker(feature) {
   });
   return marker;
 }
+var highlightMarker = L.MakiMarkers.icon({
+  icon: "college",
+  color: "#de2d26",
+  size: "l"
+});
+
+var defaultMarker = L.MakiMarkers.icon({
+  icon: "college",
+  color: "#474747",
+  size: "m"
+});
+
 function highlightFeature(e){
   var layer = e.target;
-  var highIcon = L.icon({
+  layer.setStyle({
     icon: "college",
-    color: "#474747",
+    color: "#de2d26",
     size: "l"
   });
-  layer.setStyle({
-    });
 }
+function resetFeature(e){
+  var layer = e.target;
+  layer.setStyle(defaultMarker);
+}
+
 function onEachFeature(feature,layer){
   layer.on({
-    //mouseover: highlightFeature,
+    mouseover: highlightFeature,
+    mouseout: resetFeature,
     click: pop_SecondarySchools(feature,layer)
   });
 }
