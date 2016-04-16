@@ -197,9 +197,25 @@ function schoolMarker(feature) {
   });
   return marker;
 }
+function highlightFeature(e){
+  var layer = e.target;
+  var highIcon = L.icon({
+    icon: "college",
+    color: "#474747",
+    size: "l"
+  })
+  layer.setStyle({
+    });
+}
+function onEachFeature(feature,layer){
+  layer.on({
+    mouseover: highlightFeature,
+    click: pop_SecondarySchools(feature,layer)
+  });
+}
 
 var json_SecondarySchools = new L.geoJson(secondarySchools, {
-  onEachFeature: pop_SecondarySchools,
+  onEachFeature:onEachFeature,
   pointToLayer: function(feature, latlng) {
     // console.log(latlng);
     // schoolsLoc.push(latlng);
