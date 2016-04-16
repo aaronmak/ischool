@@ -160,17 +160,43 @@ function pop_SecondarySchools(feature, layer) {
 
   var popupContent = L.popup().setContent(graph);
 
-  var graphColumns = [['x', '2014', '2015', '2016']];
+  var graphColumns = [['x', '2014', '2015', '2016', '2017']];
 
 
   if (feature.properties['2016 Sec1(Express_Lower)'] || feature.properties['2014 Sec1(Express_Lower)'] || feature.properties['2015 Sec1(Express_Lower)']) {
-    graphColumns.push(['Express Stream', feature.properties['2014 Sec1(Express_Lower)'], feature.properties['2015 Sec1(Express_Lower)'], feature.properties['2016 Sec1(Express_Lower)']]);
+    var expressCol = ['Express Stream'];
+    if (feature.properties['2014 Sec1(Express_Lower)']) {expressCol.push(feature.properties['2014 Sec1(Express_Lower)']);}
+    if (feature.properties['2015 Sec1(Express_Lower)']) {expressCol.push(feature.properties['2015 Sec1(Express_Lower)']);}
+    if (feature.properties['2016 Sec1(Express_Lower)']) {
+      expressCol.push(feature.properties['2016 Sec1(Express_Lower)']);
+      expressCol.push(feature.properties['2017 Expected(Express_Lower)']);
+    }
+    graphColumns.push(expressCol);
   }
   if (feature.properties['2016 Sec1(Normal(A)_Lower)'] || feature.properties['2014 Sec1(Normal(A)_Lower)'] || feature.properties['2015 Sec1(Normal(A)_Lower)']) {
-    graphColumns.push(['Normal(A) Stream', feature.properties['2014 Sec1(Normal(A)_Lower)'], feature.properties['2015 Sec1(Normal(A)_Lower)'], feature.properties['2016 Sec1(Normal(A)_Lower)']]);
+    var normalACol = ['Normal(A) Stream'];
+    if (feature.properties['2014 Sec1(Normal(A)_Lower)']) {normalACol.push(feature.properties['2014 Sec1(Normal(A)_Lower)']);}
+    if (feature.properties['2015 Sec1(Normal(A)_Lower)']) {normalACol.push(feature.properties['2015 Sec1(Normal(A)_Lower)']);}
+    if (feature.properties['2016 Sec1(Normal(A)_Lower)']) {
+      normalACol.push(feature.properties['2016 Sec1(Normal(A)_Lower)']);
+      normalACol.push(feature.properties['2017 Expected(Normal(A)_Lower)']);
+    }
+    graphColumns.push(normalACol);
   }
   if (feature.properties['2016 Sec1(Normal(T)_Lower)'] || feature.properties['2014 Sec1(Normal(T)_Lower)'] || feature.properties['2015 Sec1(Normal(T)_Lower)']) {
-    graphColumns.push(['Normal(T) Stream', feature.properties['2014 Sec1(Normal(T)_Lower)'], feature.properties['2015 Sec1(Normal(T)_Lower)'], feature.properties['2016 Sec1(Normal(T)_Lower)']]);
+    // if (feature.properties['2016 Sec1(Normal(T)_Lower)']) {
+    //   graphColumns.push(['Normal(T) Stream', feature.properties['2014 Sec1(Normal(T)_Lower)'], feature.properties['2015 Sec1(Normal(T)_Lower)'], feature.properties['2016 Sec1(Normal(T)_Lower)'], feature.properties['2017 Expected(Normal(T)_Lower)']]);
+    // } else {
+    //   graphColumns.push(['Normal(T) Stream', feature.properties['2014 Sec1(Normal(T)_Lower)'], feature.properties['2015 Sec1(Normal(T)_Lower)'], feature.properties['2016 Sec1(Normal(T)_Lower)']]);
+    // }
+    var normalTCol = ['Normal(T) Stream'];
+    if (feature.properties['2014 Sec1(Normal(T)_Lower)']) {normalTCol.push(feature.properties['2014 Sec1(Normal(T)_Lower)']);}
+    if (feature.properties['2015 Sec1(Normal(T)_Lower)']) {normalTCol.push(feature.properties['2015 Sec1(Normal(T)_Lower)']);}
+    if (feature.properties['2016 Sec1(Normal(T)_Lower)']) {
+      normalTCol.push(feature.properties['2016 Sec1(Normal(T)_Lower)']);
+      normalTCol.push(feature.properties['2017 Expected(Normal(T)_Lower)']);
+    }
+    graphColumns.push(normalTCol);
   }
 
   var chart = c3.generate({
@@ -181,7 +207,12 @@ function pop_SecondarySchools(feature, layer) {
     },
     data: {
       x: 'x',
-      columns: graphColumns
+      columns: graphColumns,
+      regions: {
+        'Express Stream': [{'start':2016, 'style':'dashed'}],
+        'Normal(A) Stream': [{'start':2016, 'style':'dashed'}],
+        'Normal(T) Stream': [{'start':2016, 'style':'dashed'}]
+      }
     },
     axis: {
       y: {
@@ -194,7 +225,7 @@ function pop_SecondarySchools(feature, layer) {
         }
       },
       x: {
-        padding: {right: 0.1},
+        padding: {right: 0.2},
         label: {
           text: schoolName,
           position: 'outer-center'
@@ -317,12 +348,12 @@ function homeMarker(feature) {
 
 function getCoord(postalcode) {
   if (add_hmarker) {map.removeLayer(add_hmarker);} // to remove old marker
-  var getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=0+nU5hAyy+NgqVpO3mepHsmZ1r6d+LI49ib3TUJuO9mG+HraaLvzEmEjXCdpYzyL14cwxTLFj6Jgc1EMIUClbdsmU/Egnr44bte4m9ecFNv2Rj99njfzrw==|mv73ZvjFcSo=';
+  var getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=j6/Rfby70oVeYjQxxA2ZsgGpk+VKBUyP6mhmDVQmu+NQVW0ylJG6K0/MgUI8B49FH0A0Fs7Nb5Nb/2PcjolCcwNGytg/J27TSXxrkWgeAqYM0qi2ManejNlLmtuP6c/g|mv73ZvjFcSo=';
   if (document.location.hostname == "localhost") {
     getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=xkg8VRu6Ol+gMH+SUamkRIEB7fKzhwMvfMo/2U8UJcFhdvR4yN1GutmUIA3A6r3LDhot215OVVkZvNRzjl28TNUZgYFSswOi';
   }
   var token = '';
-  // console.log('getTokenURL: ' + getTokenURL);
+  console.log('getTokenURL: ' + getTokenURL);
   $.getJSON(getTokenURL)
   .done(function(data){
     token = data.GetToken[0].NewToken;

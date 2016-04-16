@@ -13,11 +13,17 @@ module.exports = function (grunt) {
 
     grunt.initConfig({
       pkg: grunt.file.readJSON('package.json'),
+      'gh-pages': {
+        options: {
+          base: 'dist'
+        },
+        src: ['**']
+      },
       bower_concat: {
         all: {
           dest: {
-            'js': 'src/js/_bower.js',
-            'css': 'src/css/_bower.css'
+            'js': 'src/js/bower.js',
+            'css': 'src/css/bower.css'
           },
           dependencies: {
             'jquery-sidebar': 'jquery'
@@ -33,11 +39,11 @@ module.exports = function (grunt) {
         },
         // js: {
         //   // src: ['src/components/jquery/dist/jquery.js','src/components/leaflet/dist/leaflet.js',
-        //   src: ['src/js/_bower.js', 'src/js/*.js'],
+        //   src: ['src/js/bower.js', 'src/js/*.js'],
         //   dest: 'dist/js/<%= pkg.name %>.js'
         // },
         css: {
-          src: ['src/css/_bower.css','src/css/*.css'],
+          src: ['src/css/bower.css','src/css/*.css'],
           dest: 'dist/css/<%=pkg.name %>.css'
         }
       },
@@ -47,14 +53,14 @@ module.exports = function (grunt) {
         },
         dist: {
           files: {
-            'dist/js/_bower.min.js': 'src/js/_bower.js',
+            'dist/js/bower.min.js': 'src/js/bower.js',
             'dist/js/main.min.js': 'src/js/main.js',
             'dist/js/turf_distance.min.js': 'src/js/turf_distance.min.js'
           }
         }
       },
       jshint: {
-        files: ['Gruntfile.js', 'src/js/*.js', 'test/**/*.js', '!src/**/_bower.js', '!src/**/turf_distance.min.js'],
+        files: ['Gruntfile.js', 'src/js/*.js', 'test/**/*.js', '!src/**/bower.js', '!src/**/turf_distance.min.js'],
         options: {
           // options here to override JSHint defaults
           globals: {
@@ -111,7 +117,7 @@ module.exports = function (grunt) {
           reload: "dist/css/ischool.css"
         },
         js: {
-          reload: ["dist/js/main.min.js","dist/js/_bower.min.js"]
+          reload: ["dist/js/main.min.js","dist/js/bower.min.js"]
         },
         all: {
           reload: true
