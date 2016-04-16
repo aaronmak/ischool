@@ -3,3 +3,4 @@
 /.sass-cache/*
 /dist/*
 /npm-debug.log
+/.grunt/*
