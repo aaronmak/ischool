@@ -19821,1688 +19821,2712 @@ return jQuery;
   });
   if (typeof define === "function" && define.amd) this.d3 = d3, define(d3); else if (typeof module === "object" && module.exports) module.exports = d3; else this.d3 = d3;
 }();
-/*
- * jQuery Dynatable plugin 0.3.1
- *
- * Copyright (c) 2014 Steve Schwartz (JangoSteve)
- *
- * Dual licensed under the AGPL and Proprietary licenses:
- *   http://www.dynatable.com/license/
- *
- * Date: Tue Jan 02 2014
- */
-//
+!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),(f.L||(f.L={})).Routing=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+function corslite(url, callback, cors) {
+    var sent = false;
 
-(function($) {
-  var defaults,
-      mergeSettings,
-      dt,
-      Model,
-      modelPrototypes = {
-        dom: Dom,
-        domColumns: DomColumns,
-        records: Records,
-        recordsCount: RecordsCount,
-        processingIndicator: ProcessingIndicator,
-        state: State,
-        sorts: Sorts,
-        sortsHeaders: SortsHeaders,
-        queries: Queries,
-        inputsSearch: InputsSearch,
-        paginationPage: PaginationPage,
-        paginationPerPage: PaginationPerPage,
-        paginationLinks: PaginationLinks
-      },
-      utility,
-      build,
-      processAll,
-      initModel,
-      defaultRowWriter,
-      defaultCellWriter,
-      defaultAttributeWriter,
-      defaultAttributeReader;
-
-  //-----------------------------------------------------------------
-  // Cached plugin global defaults
-  //-----------------------------------------------------------------
-
-  defaults = {
-    features: {
-      paginate: true,
-      sort: true,
-      pushState: true,
-      search: true,
-      recordCount: true,
-      perPageSelect: true
-    },
-    table: {
-      defaultColumnIdStyle: 'camelCase',
-      columns: null,
-      headRowSelector: 'thead tr', // or e.g. tr:first-child
-      bodyRowSelector: 'tbody tr',
-      headRowClass: null
-    },
-    inputs: {
-      queries: null,
-      sorts: null,
-      multisort: ['ctrlKey', 'shiftKey', 'metaKey'],
-      page: null,
-      queryEvent: 'blur change',
-      recordCountTarget: null,
-      recordCountPlacement: 'after',
-      paginationLinkTarget: null,
-      paginationLinkPlacement: 'after',
-      paginationClass: 'dynatable-pagination-links',
-      paginationLinkClass: 'dynatable-page-link',
-      paginationPrevClass: 'dynatable-page-prev',
-      paginationNextClass: 'dynatable-page-next',
-      paginationActiveClass: 'dynatable-active-page',
-      paginationDisabledClass: 'dynatable-disabled-page',
-      paginationPrev: 'Previous',
-      paginationNext: 'Next',
-      paginationGap: [1,2,2,1],
-      searchTarget: null,
-      searchPlacement: 'before',
-      perPageTarget: null,
-      perPagePlacement: 'before',
-      perPageText: 'Show: ',
-      recordCountText: 'Showing ',
-      processingText: 'Processing...'
-    },
-    dataset: {
-      ajax: false,
-      ajaxUrl: null,
-      ajaxCache: null,
-      ajaxOnLoad: false,
-      ajaxMethod: 'GET',
-      ajaxDataType: 'json',
-      totalRecordCount: null,
-      queries: {},
-      queryRecordCount: null,
-      page: null,
-      perPageDefault: 10,
-      perPageOptions: [10,20,50,100],
-      sorts: {},
-      sortsKeys: null,
-      sortTypes: {},
-      records: null
-    },
-    writers: {
-      _rowWriter: defaultRowWriter,
-      _cellWriter: defaultCellWriter,
-      _attributeWriter: defaultAttributeWriter
-    },
-    readers: {
-      _rowReader: null,
-      _attributeReader: defaultAttributeReader
-    },
-    params: {
-      dynatable: 'dynatable',
-      queries: 'queries',
-      sorts: 'sorts',
-      page: 'page',
-      perPage: 'perPage',
-      offset: 'offset',
-      records: 'records',
-      record: null,
-      queryRecordCount: 'queryRecordCount',
-      totalRecordCount: 'totalRecordCount'
+    if (typeof window.XMLHttpRequest === 'undefined') {
+        return callback(Error('Browser not supported'));
     }
-  };
 
-  //-----------------------------------------------------------------
-  // Each dynatable instance inherits from this,
-  // set properties specific to instance
-  //-----------------------------------------------------------------
-
-  dt = {
-    init: function(element, options) {
-      this.settings = mergeSettings(options);
-      this.element = element;
-      this.$element = $(element);
-
-      // All the setup that doesn't require element or options
-      build.call(this);
-
-      return this;
-    },
-
-    process: function(skipPushState) {
-      processAll.call(this, skipPushState);
+    if (typeof cors === 'undefined') {
+        var m = url.match(/^\s*https?:\/\/[^\/]*/);
+        cors = m && (m[0] !== location.protocol + '//' + location.domain +
+                (location.port ? ':' + location.port : ''));
     }
-  };
 
-  //-----------------------------------------------------------------
-  // Cached plugin global functions
-  //-----------------------------------------------------------------
+    var x = new window.XMLHttpRequest();
 
-  mergeSettings = function(options) {
-    var newOptions = $.extend(true, {}, defaults, options);
+    function isSuccessful(status) {
+        return status >= 200 && status < 300 || status === 304;
+    }
 
-    // TODO: figure out a better way to do this.
-    // Doing `extend(true)` causes any elements that are arrays
-    // to merge the default and options arrays instead of overriding the defaults.
-    if (options) {
-      if (options.inputs) {
-        if (options.inputs.multisort) {
-          newOptions.inputs.multisort = options.inputs.multisort;
+    if (cors && !('withCredentials' in x)) {
+        // IE8-9
+        x = new window.XDomainRequest();
+
+        // Ensure callback is never called synchronously, i.e., before
+        // x.send() returns (this has been observed in the wild).
+        // See https://github.com/mapbox/mapbox.js/issues/472
+        var original = callback;
+        callback = function() {
+            if (sent) {
+                original.apply(this, arguments);
+            } else {
+                var that = this, args = arguments;
+                setTimeout(function() {
+                    original.apply(that, args);
+                }, 0);
+            }
         }
-        if (options.inputs.paginationGap) {
-          newOptions.inputs.paginationGap = options.inputs.paginationGap;
-        }
-      }
-      if (options.dataset && options.dataset.perPageOptions) {
-        newOptions.dataset.perPageOptions = options.dataset.perPageOptions;
-      }
     }
 
-    return newOptions;
-  };
-
-  build = function() {
-    this.$element.trigger('dynatable:preinit', this);
-
-    for (model in modelPrototypes) {
-      if (modelPrototypes.hasOwnProperty(model)) {
-        var modelInstance = this[model] = new modelPrototypes[model](this, this.settings);
-        if (modelInstance.initOnLoad()) {
-          modelInstance.init();
-        }
-      }
+    function loaded() {
+        if (
+            // XDomainRequest
+            x.status === undefined ||
+            // modern browsers
+            isSuccessful(x.status)) callback.call(x, null, x);
+        else callback.call(x, x, null);
     }
 
-    this.$element.trigger('dynatable:init', this);
-
-    if (!this.settings.dataset.ajax || (this.settings.dataset.ajax && this.settings.dataset.ajaxOnLoad) || this.settings.features.paginate) {
-      this.process();
-    }
-  };
-
-  processAll = function(skipPushState) {
-    var data = {};
-
-    this.$element.trigger('dynatable:beforeProcess', data);
-
-    if (!$.isEmptyObject(this.settings.dataset.queries)) { data[this.settings.params.queries] = this.settings.dataset.queries; }
-    // TODO: Wrap this in a try/rescue block to hide the processing indicator and indicate something went wrong if error
-    this.processingIndicator.show();
-
-    if (this.settings.features.sort && !$.isEmptyObject(this.settings.dataset.sorts)) { data[this.settings.params.sorts] = this.settings.dataset.sorts; }
-    if (this.settings.features.paginate && this.settings.dataset.page) {
-      var page = this.settings.dataset.page,
-          perPage = this.settings.dataset.perPage;
-      data[this.settings.params.page] = page;
-      data[this.settings.params.perPage] = perPage;
-      data[this.settings.params.offset] = (page - 1) * perPage;
-    }
-    if (this.settings.dataset.ajaxData) { $.extend(data, this.settings.dataset.ajaxData); }
-
-    // If ajax, sends query to ajaxUrl with queries and sorts serialized and appended in ajax data
-    // otherwise, executes queries and sorts on in-page data
-    if (this.settings.dataset.ajax) {
-      var _this = this;
-      var options = {
-        type: _this.settings.dataset.ajaxMethod,
-        dataType: _this.settings.dataset.ajaxDataType,
-        data: data,
-        error: function(xhr, error) {
-        },
-        success: function(response) {
-          _this.$element.trigger('dynatable:ajax:success', response);
-          // Merge ajax results and meta-data into dynatables cached data
-          _this.records.updateFromJson(response);
-          // update table with new records
-          _this.dom.update();
-
-          if (!skipPushState && _this.state.initOnLoad()) {
-            _this.state.push(data);
-          }
-        },
-        complete: function() {
-          _this.processingIndicator.hide();
-        }
-      };
-      // Do not pass url to `ajax` options if blank
-      if (this.settings.dataset.ajaxUrl) {
-        options.url = this.settings.dataset.ajaxUrl;
-
-      // If ajaxUrl is blank, then we're using the current page URL,
-      // we need to strip out any query, sort, or page data controlled by dynatable
-      // that may have been in URL when page loaded, so that it doesn't conflict with
-      // what's passed in with the data ajax parameter
-      } else {
-        options.url = utility.refreshQueryString(window.location.href, {}, this.settings);
-      }
-      if (this.settings.dataset.ajaxCache !== null) { options.cache = this.settings.dataset.ajaxCache; }
-
-      $.ajax(options);
+    // Both `onreadystatechange` and `onload` can fire. `onreadystatechange`
+    // has [been supported for longer](http://stackoverflow.com/a/9181508/229001).
+    if ('onload' in x) {
+        x.onload = loaded;
     } else {
-      this.records.resetOriginal();
-      this.queries.run();
-      if (this.settings.features.sort) {
-        this.records.sort();
-      }
-      if (this.settings.features.paginate) {
-        this.records.paginate();
-      }
-      this.dom.update();
-      this.processingIndicator.hide();
-
-      if (!skipPushState && this.state.initOnLoad()) {
-        this.state.push(data);
-      }
-    }
-    this.$element.trigger('dynatable:afterProcess', data);
-  };
-
-  function defaultRowWriter(rowIndex, record, columns, cellWriter) {
-    var tr = '';
-
-    // grab the record's attribute for each column
-    for (var i = 0, len = columns.length; i < len; i++) {
-      tr += cellWriter(columns[i], record);
+        x.onreadystatechange = function readystate() {
+            if (x.readyState === 4) {
+                loaded();
+            }
+        };
     }
 
-    return '<tr>' + tr + '</tr>';
-  };
+    // Call the callback with the XMLHttpRequest object as an error and prevent
+    // it from ever being called again by reassigning it to `noop`
+    x.onerror = function error(evt) {
+        // XDomainRequest provides no evt parameter
+        callback.call(this, evt || true, null);
+        callback = function() { };
+    };
 
-  function defaultCellWriter(column, record) {
-    var html = column.attributeWriter(record),
-        td = '<td';
+    // IE9 must have onprogress be set to a unique function.
+    x.onprogress = function() { };
 
-    if (column.hidden || column.textAlign) {
-      td += ' style="';
+    x.ontimeout = function(evt) {
+        callback.call(this, evt, null);
+        callback = function() { };
+    };
 
-      // keep cells for hidden column headers hidden
-      if (column.hidden) {
-        td += 'display: none;';
-      }
+    x.onabort = function(evt) {
+        callback.call(this, evt, null);
+        callback = function() { };
+    };
 
-      // keep cells aligned as their column headers are aligned
-      if (column.textAlign) {
-        td += 'text-align: ' + column.textAlign + ';';
-      }
+    // GET is the only supported HTTP Verb by XDomainRequest and is the
+    // only one supported here.
+    x.open('GET', url, true);
 
-      td += '"';
+    // Send the request. Sending data is not supported.
+    x.send(null);
+    sent = true;
+
+    return x;
+}
+
+if (typeof module !== 'undefined') module.exports = corslite;
+
+},{}],2:[function(require,module,exports){
+var polyline = {};
+
+// Based off of [the offical Google document](https://developers.google.com/maps/documentation/utilities/polylinealgorithm)
+//
+// Some parts from [this implementation](http://facstaff.unca.edu/mcmcclur/GoogleMaps/EncodePolyline/PolylineEncoder.js)
+// by [Mark McClure](http://facstaff.unca.edu/mcmcclur/)
+
+function encode(coordinate, factor) {
+    coordinate = Math.round(coordinate * factor);
+    coordinate <<= 1;
+    if (coordinate < 0) {
+        coordinate = ~coordinate;
+    }
+    var output = '';
+    while (coordinate >= 0x20) {
+        output += String.fromCharCode((0x20 | (coordinate & 0x1f)) + 63);
+        coordinate >>= 5;
+    }
+    output += String.fromCharCode(coordinate + 63);
+    return output;
+}
+
+// This is adapted from the implementation in Project-OSRM
+// https://github.com/DennisOSRM/Project-OSRM-Web/blob/master/WebContent/routing/OSRM.RoutingGeometry.js
+polyline.decode = function(str, precision) {
+    var index = 0,
+        lat = 0,
+        lng = 0,
+        coordinates = [],
+        shift = 0,
+        result = 0,
+        byte = null,
+        latitude_change,
+        longitude_change,
+        factor = Math.pow(10, precision || 5);
+
+    // Coordinates have variable length when encoded, so just keep
+    // track of whether we've hit the end of the string. In each
+    // loop iteration, a single coordinate is decoded.
+    while (index < str.length) {
+
+        // Reset shift, result, and byte
+        byte = null;
+        shift = 0;
+        result = 0;
+
+        do {
+            byte = str.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+        shift = result = 0;
+
+        do {
+            byte = str.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+        lat += latitude_change;
+        lng += longitude_change;
+
+        coordinates.push([lat / factor, lng / factor]);
     }
 
-    return td + '>' + html + '</td>';
-  };
+    return coordinates;
+};
 
-  function defaultAttributeWriter(record) {
-    // `this` is the column object in settings.columns
-    // TODO: automatically convert common types, such as arrays and objects, to string
-    return record[this.id];
-  };
+polyline.encode = function(coordinates, precision) {
+    if (!coordinates.length) return '';
 
-  function defaultAttributeReader(cell, record) {
-    return $(cell).html();
-  };
+    var factor = Math.pow(10, precision || 5),
+        output = encode(coordinates[0][0], factor) + encode(coordinates[0][1], factor);
 
-  //-----------------------------------------------------------------
-  // Dynatable object model prototype
-  // (all object models get these default functions)
-  //-----------------------------------------------------------------
-
-  Model = {
-    initOnLoad: function() {
-      return true;
-    },
-
-    init: function() {}
-  };
-
-  for (model in modelPrototypes) {
-    if (modelPrototypes.hasOwnProperty(model)) {
-      var modelPrototype = modelPrototypes[model];
-      modelPrototype.prototype = Model;
+    for (var i = 1; i < coordinates.length; i++) {
+        var a = coordinates[i], b = coordinates[i - 1];
+        output += encode(a[0] - b[0], factor);
+        output += encode(a[1] - b[1], factor);
     }
-  }
-
-  //-----------------------------------------------------------------
-  // Dynatable object models
-  //-----------------------------------------------------------------
-
-  function Dom(obj, settings) {
-    var _this = this;
-
-    // update table contents with new records array
-    // from query (whether ajax or not)
-    this.update = function() {
-      var rows = '',
-          columns = settings.table.columns,
-          rowWriter = settings.writers._rowWriter,
-          cellWriter = settings.writers._cellWriter;
-
-      obj.$element.trigger('dynatable:beforeUpdate', rows);
-
-      // loop through records
-      for (var i = 0, len = settings.dataset.records.length; i < len; i++) {
-        var record = settings.dataset.records[i],
-            tr = rowWriter(i, record, columns, cellWriter);
-        rows += tr;
-      }
-
-      // Appended dynatable interactive elements
-      if (settings.features.recordCount) {
-        $('#dynatable-record-count-' + obj.element.id).replaceWith(obj.recordsCount.create());
-      }
-      if (settings.features.paginate) {
-        $('#dynatable-pagination-links-' + obj.element.id).replaceWith(obj.paginationLinks.create());
-        if (settings.features.perPageSelect) {
-          $('#dynatable-per-page-' + obj.element.id).val(parseInt(settings.dataset.perPage));
-        }
-      }
-
-      // Sort headers functionality
-      if (settings.features.sort && columns) {
-        obj.sortsHeaders.removeAllArrows();
-        for (var i = 0, len = columns.length; i < len; i++) {
-          var column = columns[i],
-              sortedByColumn = utility.allMatch(settings.dataset.sorts, column.sorts, function(sorts, sort) { return sort in sorts; }),
-              value = settings.dataset.sorts[column.sorts[0]];
-
-          if (sortedByColumn) {
-            obj.$element.find('[data-dynatable-column="' + column.id + '"]').find('.dynatable-sort-header').each(function(){
-              if (value == 1) {
-                obj.sortsHeaders.appendArrowUp($(this));
-              } else {
-                obj.sortsHeaders.appendArrowDown($(this));
-              }
-            });
-          }
-        }
-      }
-
-      // Query search functionality
-      if (settings.inputs.queries || settings.features.search) {
-        var allQueries = settings.inputs.queries || $();
-        if (settings.features.search) {
-          allQueries = allQueries.add('#dynatable-query-search-' + obj.element.id);
-        }
-
-        allQueries.each(function() {
-          var $this = $(this),
-              q = settings.dataset.queries[$this.data('dynatable-query')];
-          $this.val(q || '');
-        });
-      }
-
-      obj.$element.find(settings.table.bodyRowSelector).remove();
-      obj.$element.append(rows);
-
-      obj.$element.trigger('dynatable:afterUpdate', rows);
-    };
-  };
-
-  function DomColumns(obj, settings) {
-    var _this = this;
-
-    this.initOnLoad = function() {
-      return obj.$element.is('table');
-    };
-
-    this.init = function() {
-      settings.table.columns = [];
-      this.getFromTable();
-    };
-
-    // initialize table[columns] array
-    this.getFromTable = function() {
-      var $columns = obj.$element.find(settings.table.headRowSelector).children('th,td');
-      if ($columns.length) {
-        $columns.each(function(index){
-          _this.add($(this), index, true);
-        });
-      } else {
-        return $.error("Couldn't find any columns headers in '" + settings.table.headRowSelector + " th,td'. If your header row is different, specify the selector in the table: headRowSelector option.");
-      }
-    };
-
-    this.add = function($column, position, skipAppend, skipUpdate) {
-      var columns = settings.table.columns,
-          label = $column.text(),
-          id = $column.data('dynatable-column') || utility.normalizeText(label, settings.table.defaultColumnIdStyle),
-          dataSorts = $column.data('dynatable-sorts'),
-          sorts = dataSorts ? $.map(dataSorts.split(','), function(text) { return $.trim(text); }) : [id];
-
-      // If the column id is blank, generate an id for it
-      if ( !id ) {
-        this.generate($column);
-        id = $column.data('dynatable-column');
-      }
-      // Add column data to plugin instance
-      columns.splice(position, 0, {
-        index: position,
-        label: label,
-        id: id,
-        attributeWriter: settings.writers[id] || settings.writers._attributeWriter,
-        attributeReader: settings.readers[id] || settings.readers._attributeReader,
-        sorts: sorts,
-        hidden: $column.css('display') === 'none',
-        textAlign: $column.css('text-align')
-      });
-
-      // Modify header cell
-      $column
-        .attr('data-dynatable-column', id)
-        .addClass('dynatable-head');
-      if (settings.table.headRowClass) { $column.addClass(settings.table.headRowClass); }
-
-      // Append column header to table
-      if (!skipAppend) {
-        var domPosition = position + 1,
-            $sibling = obj.$element.find(settings.table.headRowSelector)
-              .children('th:nth-child(' + domPosition + '),td:nth-child(' + domPosition + ')').first(),
-            columnsAfter = columns.slice(position + 1, columns.length);
-
-        if ($sibling.length) {
-          $sibling.before($column);
-        // sibling column doesn't yet exist (maybe this is the last column in the header row)
-        } else {
-          obj.$element.find(settings.table.headRowSelector).append($column);
-        }
-
-        obj.sortsHeaders.attachOne($column.get());
-
-        // increment the index of all columns after this one that was just inserted
-        if (columnsAfter.length) {
-          for (var i = 0, len = columnsAfter.length; i < len; i++) {
-            columnsAfter[i].index += 1;
-          }
-        }
-
-        if (!skipUpdate) {
-          obj.dom.update();
-        }
-      }
-
-      return dt;
-    };
-
-    this.remove = function(columnIndexOrId) {
-      var columns = settings.table.columns,
-          length = columns.length;
-
-      if (typeof(columnIndexOrId) === "number") {
-        var column = columns[columnIndexOrId];
-        this.removeFromTable(column.id);
-        this.removeFromArray(columnIndexOrId);
-      } else {
-        // Traverse columns array in reverse order so that subsequent indices
-        // don't get messed up when we delete an item from the array in an iteration
-        for (var i = columns.length - 1; i >= 0; i--) {
-          var column = columns[i];
-
-          if (column.id === columnIndexOrId) {
-            this.removeFromTable(columnIndexOrId);
-            this.removeFromArray(i);
-          }
-        }
-      }
-
-      obj.dom.update();
-    };
-
-    this.removeFromTable = function(columnId) {
-      obj.$element.find(settings.table.headRowSelector).children('[data-dynatable-column="' + columnId + '"]').first()
-        .remove();
-    };
-
-    this.removeFromArray = function(index) {
-      var columns = settings.table.columns,
-          adjustColumns;
-      columns.splice(index, 1);
-      adjustColumns = columns.slice(index, columns.length);
-      for (var i = 0, len = adjustColumns.length; i < len; i++) {
-        adjustColumns[i].index -= 1;
-      }
-    };
-
-    this.generate = function($cell) {
-      var cell = $cell === undefined ? $('<th></th>') : $cell;
-      return this.attachGeneratedAttributes(cell);
-    };
-
-    this.attachGeneratedAttributes = function($cell) {
-      // Use increment to create unique column name that is the same each time the page is reloaded,
-      // in order to avoid errors with mismatched attribute names when loading cached `dataset.records` array
-      var increment = obj.$element.find(settings.table.headRowSelector).children('th[data-dynatable-generated]').length;
-      return $cell
-        .attr('data-dynatable-column', 'dynatable-generated-' + increment) //+ utility.randomHash(),
-        .attr('data-dynatable-no-sort', 'true')
-        .attr('data-dynatable-generated', increment);
-    };
-  };
-
-  function Records(obj, settings) {
-    var _this = this;
-
-    this.initOnLoad = function() {
-      return !settings.dataset.ajax;
-    };
-
-    this.init = function() {
-      if (settings.dataset.records === null) {
-        settings.dataset.records = this.getFromTable();
-
-        if (!settings.dataset.queryRecordCount) {
-          settings.dataset.queryRecordCount = this.count();
-        }
-
-        if (!settings.dataset.totalRecordCount){
-          settings.dataset.totalRecordCount = settings.dataset.queryRecordCount;
-        }
-      }
-
-      // Create cache of original full recordset (unpaginated and unqueried)
-      settings.dataset.originalRecords = $.extend(true, [], settings.dataset.records);
-    };
-
-    // merge ajax response json with cached data including
-    // meta-data and records
-    this.updateFromJson = function(data) {
-      var records;
-      if (settings.params.records === "_root") {
-        records = data;
-      } else if (settings.params.records in data) {
-        records = data[settings.params.records];
-      }
-      if (settings.params.record) {
-        var len = records.length - 1;
-        for (var i = 0; i < len; i++) {
-          records[i] = records[i][settings.params.record];
-        }
-      }
-      if (settings.params.queryRecordCount in data) {
-        settings.dataset.queryRecordCount = data[settings.params.queryRecordCount];
-      }
-      if (settings.params.totalRecordCount in data) {
-        settings.dataset.totalRecordCount = data[settings.params.totalRecordCount];
-      }
-      settings.dataset.records = records;
-    };
-
-    // For really advanced sorting,
-    // see http://james.padolsey.com/javascript/sorting-elements-with-jquery/
-    this.sort = function() {
-      var sort = [].sort,
-          sorts = settings.dataset.sorts,
-          sortsKeys = settings.dataset.sortsKeys,
-          sortTypes = settings.dataset.sortTypes;
-
-      var sortFunction = function(a, b) {
-        var comparison;
-        if ($.isEmptyObject(sorts)) {
-          comparison = obj.sorts.functions['originalPlacement'](a, b);
-        } else {
-          for (var i = 0, len = sortsKeys.length; i < len; i++) {
-            var attr = sortsKeys[i],
-                direction = sorts[attr],
-                sortType = sortTypes[attr] || obj.sorts.guessType(a, b, attr);
-            comparison = obj.sorts.functions[sortType](a, b, attr, direction);
-            // Don't need to sort any further unless this sort is a tie between a and b,
-            // so break the for loop unless tied
-            if (comparison !== 0) { break; }
-          }
-        }
-        return comparison;
-      }
-
-      return sort.call(settings.dataset.records, sortFunction);
-    };
-
-    this.paginate = function() {
-      var bounds = this.pageBounds(),
-          first = bounds[0], last = bounds[1];
-      settings.dataset.records = settings.dataset.records.slice(first, last);
-    };
-
-    this.resetOriginal = function() {
-      settings.dataset.records = settings.dataset.originalRecords || [];
-    };
-
-    this.pageBounds = function() {
-      var page = settings.dataset.page || 1,
-          first = (page - 1) * settings.dataset.perPage,
-          last = Math.min(first + settings.dataset.perPage, settings.dataset.queryRecordCount);
-      return [first,last];
-    };
-
-    // get initial recordset to populate table
-    // if ajax, call ajaxUrl
-    // otherwise, initialize from in-table records
-    this.getFromTable = function() {
-      var records = [],
-          columns = settings.table.columns,
-          tableRecords = obj.$element.find(settings.table.bodyRowSelector);
-
-      tableRecords.each(function(index){
-        var record = {};
-        record['dynatable-original-index'] = index;
-        $(this).find('th,td').each(function(index) {
-          if (columns[index] === undefined) {
-            // Header cell didn't exist for this column, so let's generate and append
-            // a new header cell with a randomly generated name (so we can store and
-            // retrieve the contents of this column for each record)
-            obj.domColumns.add(obj.domColumns.generate(), columns.length, false, true); // don't skipAppend, do skipUpdate
-          }
-          var value = columns[index].attributeReader(this, record),
-              attr = columns[index].id;
-
-          // If value from table is HTML, let's get and cache the text equivalent for
-          // the default string sorting, since it rarely makes sense for sort headers
-          // to sort based on HTML tags.
-          if (typeof(value) === "string" && value.match(/\s*\<.+\>/)) {
-            if (! record['dynatable-sortable-text']) {
-              record['dynatable-sortable-text'] = {};
-            }
-            record['dynatable-sortable-text'][attr] = $.trim($('<div></div>').html(value).text());
-          }
-
-          record[attr] = value;
-        });
-        // Allow configuration function which alters record based on attributes of
-        // table row (e.g. from html5 data- attributes)
-        if (typeof(settings.readers._rowReader) === "function") {
-          settings.readers._rowReader(index, this, record);
-        }
-        records.push(record);
-      });
-      return records; // 1st row is header
-    };
-
-    // count records from table
-    this.count = function() {
-      return settings.dataset.records.length;
-    };
-  };
-
-  function RecordsCount(obj, settings) {
-    this.initOnLoad = function() {
-      return settings.features.recordCount;
-    };
-
-    this.init = function() {
-      this.attach();
-    };
-
-    this.create = function() {
-      var recordsShown = obj.records.count(),
-          recordsQueryCount = settings.dataset.queryRecordCount,
-          recordsTotal = settings.dataset.totalRecordCount,
-          text = settings.inputs.recordCountText,
-          collection_name = settings.params.records;
-
-      if (recordsShown < recordsQueryCount && settings.features.paginate) {
-        var bounds = obj.records.pageBounds();
-        text += "<span class='dynatable-record-bounds'>" + (bounds[0] + 1) + " to " + bounds[1] + "</span> of ";
-      } else if (recordsShown === recordsQueryCount && settings.features.paginate) {
-        text += recordsShown + " of ";
-      }
-      text += recordsQueryCount + " " + collection_name;
-      if (recordsQueryCount < recordsTotal) {
-        text += " (filtered from " + recordsTotal + " total records)";
-      }
-
-      return $('<span></span>', {
-                id: 'dynatable-record-count-' + obj.element.id,
-                'class': 'dynatable-record-count',
-                html: text
-              });
-    };
-
-    this.attach = function() {
-      var $target = settings.inputs.recordCountTarget ? $(settings.inputs.recordCountTarget) : obj.$element;
-      $target[settings.inputs.recordCountPlacement](this.create());
-    };
-  };
-
-  function ProcessingIndicator(obj, settings) {
-    this.init = function() {
-      this.attach();
-    };
-
-    this.create = function() {
-      var $processing = $('<div></div>', {
-            html: '<span>' + settings.inputs.processingText + '</span>',
-            id: 'dynatable-processing-' + obj.element.id,
-            'class': 'dynatable-processing',
-            style: 'position: absolute; display: none;'
-          });
-
-      return $processing;
-    };
-
-    this.position = function() {
-      var $processing = $('#dynatable-processing-' + obj.element.id),
-          $span = $processing.children('span'),
-          spanHeight = $span.outerHeight(),
-          spanWidth = $span.outerWidth(),
-          $covered = obj.$element,
-          offset = $covered.offset(),
-          height = $covered.outerHeight(), width = $covered.outerWidth();
-
-      $processing
-        .offset({left: offset.left, top: offset.top})
-        .width(width)
-        .height(height)
-      $span
-        .offset({left: offset.left + ( (width - spanWidth) / 2 ), top: offset.top + ( (height - spanHeight) / 2 )});
-
-      return $processing;
-    };
-
-    this.attach = function() {
-      obj.$element.before(this.create());
-    };
-
-    this.show = function() {
-      $('#dynatable-processing-' + obj.element.id).show();
-      this.position();
-    };
-
-    this.hide = function() {
-      $('#dynatable-processing-' + obj.element.id).hide();
-    };
-  };
-
-  function State(obj, settings) {
-    this.initOnLoad = function() {
-      // Check if pushState option is true, and if browser supports it
-      return settings.features.pushState && history.pushState;
-    };
-
-    this.init = function() {
-      window.onpopstate = function(event) {
-        if (event.state && event.state.dynatable) {
-          obj.state.pop(event);
-        }
-      }
-    };
-
-    this.push = function(data) {
-      var urlString = window.location.search,
-          urlOptions,
-          path,
-          params,
-          hash,
-          newParams,
-          cacheStr,
-          cache,
-          // replaceState on initial load, then pushState after that
-          firstPush = !(window.history.state && window.history.state.dynatable),
-          pushFunction = firstPush ? 'replaceState' : 'pushState';
-
-      if (urlString && /^\?/.test(urlString)) { urlString = urlString.substring(1); }
-      $.extend(urlOptions, data);
-
-      params = utility.refreshQueryString(urlString, data, settings);
-      if (params) { params = '?' + params; }
-      hash = window.location.hash;
-      path = window.location.pathname;
-
-      obj.$element.trigger('dynatable:push', data);
-
-      cache = { dynatable: { dataset: settings.dataset } };
-      if (!firstPush) { cache.dynatable.scrollTop = $(window).scrollTop(); }
-      cacheStr = JSON.stringify(cache);
-
-      // Mozilla has a 640k char limit on what can be stored in pushState.
-      // See "limit" in https://developer.mozilla.org/en/DOM/Manipulating_the_browser_history#The_pushState().C2.A0method
-      // and "dataStr.length" in http://wine.git.sourceforge.net/git/gitweb.cgi?p=wine/wine-gecko;a=patch;h=43a11bdddc5fc1ff102278a120be66a7b90afe28
-      //
-      // Likewise, other browsers may have varying (undocumented) limits.
-      // Also, Firefox's limit can be changed in about:config as browser.history.maxStateObjectSize
-      // Since we don't know what the actual limit will be in any given situation, we'll just try caching and rescue
-      // any exceptions by retrying pushState without caching the records.
-      //
-      // I have absolutely no idea why perPageOptions suddenly becomes an array-like object instead of an array,
-      // but just recently, this started throwing an error if I don't convert it:
-      // 'Uncaught Error: DATA_CLONE_ERR: DOM Exception 25'
-      cache.dynatable.dataset.perPageOptions = $.makeArray(cache.dynatable.dataset.perPageOptions);
-
-      try {
-        window.history[pushFunction](cache, "Dynatable state", path + params + hash);
-      } catch(error) {
-        // Make cached records = null, so that `pop` will rerun process to retrieve records
-        cache.dynatable.dataset.records = null;
-        window.history[pushFunction](cache, "Dynatable state", path + params + hash);
-      }
-    };
-
-    this.pop = function(event) {
-      var data = event.state.dynatable;
-      settings.dataset = data.dataset;
-
-      if (data.scrollTop) { $(window).scrollTop(data.scrollTop); }
-
-      // If dataset.records is cached from pushState
-      if ( data.dataset.records ) {
-        obj.dom.update();
-      } else {
-        obj.process(true);
-      }
-    };
-  };
-
-  function Sorts(obj, settings) {
-    this.initOnLoad = function() {
-      return settings.features.sort;
-    };
-
-    this.init = function() {
-      var sortsUrl = window.location.search.match(new RegExp(settings.params.sorts + '[^&=]*=[^&]*', 'g'));
-      settings.dataset.sorts = sortsUrl ? utility.deserialize(sortsUrl)[settings.params.sorts] : {};
-      settings.dataset.sortsKeys = sortsUrl ? utility.keysFromObject(settings.dataset.sorts) : [];
-    };
-
-    this.add = function(attr, direction) {
-      var sortsKeys = settings.dataset.sortsKeys,
-          index = $.inArray(attr, sortsKeys);
-      settings.dataset.sorts[attr] = direction;
-      if (index === -1) { sortsKeys.push(attr); }
-      return dt;
-    };
-
-    this.remove = function(attr) {
-      var sortsKeys = settings.dataset.sortsKeys,
-          index = $.inArray(attr, sortsKeys);
-      delete settings.dataset.sorts[attr];
-      if (index !== -1) { sortsKeys.splice(index, 1); }
-      return dt;
-    };
-
-    this.clear = function() {
-      settings.dataset.sorts = {};
-      settings.dataset.sortsKeys.length = 0;
-    };
-
-    // Try to intelligently guess which sort function to use
-    // based on the type of attribute values.
-    // Consider using something more robust than `typeof` (http://javascriptweblog.wordpress.com/2011/08/08/fixing-the-javascript-typeof-operator/)
-    this.guessType = function(a, b, attr) {
-      var types = {
-            string: 'string',
-            number: 'number',
-            'boolean': 'number',
-            object: 'number' // dates and null values are also objects, this works...
-          },
-          attrType = a[attr] ? typeof(a[attr]) : typeof(b[attr]),
-          type = types[attrType] || 'number';
-      return type;
-    };
-
-    // Built-in sort functions
-    // (the most common use-cases I could think of)
-    this.functions = {
-      number: function(a, b, attr, direction) {
-        return a[attr] === b[attr] ? 0 : (direction > 0 ? a[attr] - b[attr] : b[attr] - a[attr]);
-      },
-      string: function(a, b, attr, direction) {
-        var aAttr = (a['dynatable-sortable-text'] && a['dynatable-sortable-text'][attr]) ? a['dynatable-sortable-text'][attr] : a[attr],
-            bAttr = (b['dynatable-sortable-text'] && b['dynatable-sortable-text'][attr]) ? b['dynatable-sortable-text'][attr] : b[attr],
-            comparison;
-        aAttr = aAttr.toLowerCase();
-        bAttr = bAttr.toLowerCase();
-        comparison = aAttr === bAttr ? 0 : (direction > 0 ? aAttr > bAttr : bAttr > aAttr);
-        // force false boolean value to -1, true to 1, and tie to 0
-        return comparison === false ? -1 : (comparison - 0);
-      },
-      originalPlacement: function(a, b) {
-        return a['dynatable-original-index'] - b['dynatable-original-index'];
-      }
-    };
-  };
-
-  // turn table headers into links which add sort to sorts array
-  function SortsHeaders(obj, settings) {
-    var _this = this;
-
-    this.initOnLoad = function() {
-      return settings.features.sort;
-    };
-
-    this.init = function() {
-      this.attach();
-    };
-
-    this.create = function(cell) {
-      var $cell = $(cell),
-          $link = $('<a></a>', {
-            'class': 'dynatable-sort-header',
-            href: '#',
-            html: $cell.html()
-          }),
-          id = $cell.data('dynatable-column'),
-          column = utility.findObjectInArray(settings.table.columns, {id: id});
-
-      $link.bind('click', function(e) {
-        _this.toggleSort(e, $link, column);
-        obj.process();
-
-        e.preventDefault();
-      });
-
-      if (this.sortedByColumn($link, column)) {
-        if (this.sortedByColumnValue(column) == 1) {
-          this.appendArrowUp($link);
-        } else {
-          this.appendArrowDown($link);
-        }
-      }
-
-      return $link;
-    };
-
-    this.removeAll = function() {
-      obj.$element.find(settings.table.headRowSelector).children('th,td').each(function(){
-        _this.removeAllArrows();
-        _this.removeOne(this);
-      });
-    };
-
-    this.removeOne = function(cell) {
-      var $cell = $(cell),
-          $link = $cell.find('.dynatable-sort-header');
-      if ($link.length) {
-        var html = $link.html();
-        $link.remove();
-        $cell.html($cell.html() + html);
-      }
-    };
-
-    this.attach = function() {
-      obj.$element.find(settings.table.headRowSelector).children('th,td').each(function(){
-        _this.attachOne(this);
-      });
-    };
-
-    this.attachOne = function(cell) {
-      var $cell = $(cell);
-      if (!$cell.data('dynatable-no-sort')) {
-        $cell.html(this.create(cell));
-      }
-    };
-
-    this.appendArrowUp = function($link) {
-      this.removeArrow($link);
-      $link.append("<span class='dynatable-arrow'> &#9650;</span>");
-    };
-
-    this.appendArrowDown = function($link) {
-      this.removeArrow($link);
-      $link.append("<span class='dynatable-arrow'> &#9660;</span>");
-    };
-
-    this.removeArrow = function($link) {
-      // Not sure why `parent()` is needed, the arrow should be inside the link from `append()` above
-      $link.find('.dynatable-arrow').remove();
-    };
-
-    this.removeAllArrows = function() {
-      obj.$element.find('.dynatable-arrow').remove();
-    };
-
-    this.toggleSort = function(e, $link, column) {
-      var sortedByColumn = this.sortedByColumn($link, column),
-          value = this.sortedByColumnValue(column);
-      // Clear existing sorts unless this is a multisort event
-      if (!settings.inputs.multisort || !utility.anyMatch(e, settings.inputs.multisort, function(evt, key) { return e[key]; })) {
-        this.removeAllArrows();
-        obj.sorts.clear();
-      }
-
-      // If sorts for this column are already set
-      if (sortedByColumn) {
-        // If ascending, then make descending
-        if (value == 1) {
-          for (var i = 0, len = column.sorts.length; i < len; i++) {
-            obj.sorts.add(column.sorts[i], -1);
-          }
-          this.appendArrowDown($link);
-        // If descending, remove sort
-        } else {
-          for (var i = 0, len = column.sorts.length; i < len; i++) {
-            obj.sorts.remove(column.sorts[i]);
-          }
-          this.removeArrow($link);
-        }
-      // Otherwise, if not already set, set to ascending
-      } else {
-        for (var i = 0, len = column.sorts.length; i < len; i++) {
-          obj.sorts.add(column.sorts[i], 1);
-        }
-        this.appendArrowUp($link);
-      }
-    };
-
-    this.sortedByColumn = function($link, column) {
-      return utility.allMatch(settings.dataset.sorts, column.sorts, function(sorts, sort) { return sort in sorts; });
-    };
-
-    this.sortedByColumnValue = function(column) {
-      return settings.dataset.sorts[column.sorts[0]];
-    };
-  };
-
-  function Queries(obj, settings) {
-    var _this = this;
-
-    this.initOnLoad = function() {
-      return settings.inputs.queries || settings.features.search;
-    };
-
-    this.init = function() {
-      var queriesUrl = window.location.search.match(new RegExp(settings.params.queries + '[^&=]*=[^&]*', 'g'));
-
-      settings.dataset.queries = queriesUrl ? utility.deserialize(queriesUrl)[settings.params.queries] : {};
-      if (settings.dataset.queries === "") { settings.dataset.queries = {}; }
-
-      if (settings.inputs.queries) {
-        this.setupInputs();
-      }
-    };
-
-    this.add = function(name, value) {
-      // reset to first page since query will change records
-      if (settings.features.paginate) {
-        settings.dataset.page = 1;
-      }
-      settings.dataset.queries[name] = value;
-      return dt;
-    };
-
-    this.remove = function(name) {
-      delete settings.dataset.queries[name];
-      return dt;
-    };
-
-    this.run = function() {
-      for (query in settings.dataset.queries) {
-        if (settings.dataset.queries.hasOwnProperty(query)) {
-          var value = settings.dataset.queries[query];
-          if (_this.functions[query] === undefined) {
-            // Try to lazily evaluate query from column names if not explicitly defined
-            var queryColumn = utility.findObjectInArray(settings.table.columns, {id: query});
-            if (queryColumn) {
-              _this.functions[query] = function(record, queryValue) {
-                return record[query] == queryValue;
-              };
-            } else {
-              $.error("Query named '" + query + "' called, but not defined in queries.functions");
-              continue; // to skip to next query
-            }
-          }
-          // collect all records that return true for query
-          settings.dataset.records = $.map(settings.dataset.records, function(record) {
-            return _this.functions[query](record, value) ? record : null;
-          });
-        }
-      }
-      settings.dataset.queryRecordCount = obj.records.count();
-    };
-
-    // Shortcut for performing simple query from built-in search
-    this.runSearch = function(q) {
-      var origQueries = $.extend({}, settings.dataset.queries);
-      if (q) {
-        this.add('search', q);
-      } else {
-        this.remove('search');
-      }
-      if (!utility.objectsEqual(settings.dataset.queries, origQueries)) {
-        obj.process();
-      }
-    };
-
-    this.setupInputs = function() {
-      settings.inputs.queries.each(function() {
-        var $this = $(this),
-            event = $this.data('dynatable-query-event') || settings.inputs.queryEvent,
-            query = $this.data('dynatable-query') || $this.attr('name') || this.id,
-            queryFunction = function(e) {
-              var q = $(this).val();
-              if (q === "") { q = undefined; }
-              if (q === settings.dataset.queries[query]) { return false; }
-              if (q) {
-                _this.add(query, q);
-              } else {
-                _this.remove(query);
-              }
-              obj.process();
-              e.preventDefault();
-            };
-
-        $this
-          .attr('data-dynatable-query', query)
-          .bind(event, queryFunction)
-          .bind('keypress', function(e) {
-            if (e.which == 13) {
-              queryFunction.call(this, e);
-            }
-          });
-
-        if (settings.dataset.queries[query]) { $this.val(decodeURIComponent(settings.dataset.queries[query])); }
-      });
-    };
-
-    // Query functions for in-page querying
-    // each function should take a record and a value as input
-    // and output true of false as to whether the record is a match or not
-    this.functions = {
-      search: function(record, queryValue) {
-        var contains = false;
-        // Loop through each attribute of record
-        for (attr in record) {
-          if (record.hasOwnProperty(attr)) {
-            var attrValue = record[attr];
-            if (typeof(attrValue) === "string" && attrValue.toLowerCase().indexOf(queryValue.toLowerCase()) !== -1) {
-              contains = true;
-              // Don't need to keep searching attributes once found
-              break;
-            } else {
-              continue;
-            }
-          }
-        }
-        return contains;
-      }
-    };
-  };
-
-  function InputsSearch(obj, settings) {
-    var _this = this;
-
-    this.initOnLoad = function() {
-      return settings.features.search;
-    };
-
-    this.init = function() {
-      this.attach();
-    };
-
-    this.create = function() {
-      var $search = $('<input />', {
-            type: 'search',
-            id: 'dynatable-query-search-' + obj.element.id,
-            'data-dynatable-query': 'search',
-            value: settings.dataset.queries.search
-          }),
-          $searchSpan = $('<span></span>', {
-            id: 'dynatable-search-' + obj.element.id,
-            'class': 'dynatable-search',
-            text: 'Search: '
-          }).append($search);
-
-      $search
-        .bind(settings.inputs.queryEvent, function() {
-          obj.queries.runSearch($(this).val());
-        })
-        .bind('keypress', function(e) {
-          if (e.which == 13) {
-            obj.queries.runSearch($(this).val());
-            e.preventDefault();
-          }
-        });
-      return $searchSpan;
-    };
-
-    this.attach = function() {
-      var $target = settings.inputs.searchTarget ? $(settings.inputs.searchTarget) : obj.$element;
-      $target[settings.inputs.searchPlacement](this.create());
-    };
-  };
-
-  // provide a public function for selecting page
-  function PaginationPage(obj, settings) {
-    this.initOnLoad = function() {
-      return settings.features.paginate;
-    };
-
-    this.init = function() {
-      var pageUrl = window.location.search.match(new RegExp(settings.params.page + '=([^&]*)'));
-      // If page is present in URL parameters and pushState is enabled
-      // (meaning that it'd be possible for dynatable to have put the
-      // page parameter in the URL)
-      if (pageUrl && settings.features.pushState) {
-        this.set(pageUrl[1]);
-      } else {
-        this.set(1);
-      }
-    };
-
-    this.set = function(page) {
-      settings.dataset.page = parseInt(page, 10);
-    }
-  };
-
-  function PaginationPerPage(obj, settings) {
-    var _this = this;
-
-    this.initOnLoad = function() {
-      return settings.features.paginate;
-    };
-
-    this.init = function() {
-      var perPageUrl = window.location.search.match(new RegExp(settings.params.perPage + '=([^&]*)'));
-
-      // If perPage is present in URL parameters and pushState is enabled
-      // (meaning that it'd be possible for dynatable to have put the
-      // perPage parameter in the URL)
-      if (perPageUrl && settings.features.pushState) {
-        // Don't reset page to 1 on init, since it might override page
-        // set on init from URL
-        this.set(perPageUrl[1], true);
-      } else {
-        this.set(settings.dataset.perPageDefault, true);
-      }
-
-      if (settings.features.perPageSelect) {
-        this.attach();
-      }
-    };
-
-    this.create = function() {
-      var $select = $('<select>', {
-            id: 'dynatable-per-page-' + obj.element.id,
-            'class': 'dynatable-per-page-select'
-          });
-
-      for (var i = 0, len = settings.dataset.perPageOptions.length; i < len; i++) {
-        var number = settings.dataset.perPageOptions[i],
-            selected = settings.dataset.perPage == number ? 'selected="selected"' : '';
-        $select.append('<option value="' + number + '" ' + selected + '>' + number + '</option>');
-      }
-
-      $select.bind('change', function(e) {
-        _this.set($(this).val());
-        obj.process();
-      });
-
-      return $('<span />', {
-        'class': 'dynatable-per-page'
-      }).append("<span class='dynatable-per-page-label'>" + settings.inputs.perPageText + "</span>").append($select);
-    };
-
-    this.attach = function() {
-      var $target = settings.inputs.perPageTarget ? $(settings.inputs.perPageTarget) : obj.$element;
-      $target[settings.inputs.perPagePlacement](this.create());
-    };
-
-    this.set = function(number, skipResetPage) {
-      if (!skipResetPage) { obj.paginationPage.set(1); }
-      settings.dataset.perPage = parseInt(number);
-    };
-  };
-
-  // pagination links which update dataset.page attribute
-  function PaginationLinks(obj, settings) {
-    var _this = this;
-
-    this.initOnLoad = function() {
-      return settings.features.paginate;
-    };
-
-    this.init = function() {
-      this.attach();
-    };
-
-    this.create = function() {
-      var pageLinks = '<ul id="' + 'dynatable-pagination-links-' + obj.element.id + '" class="' + settings.inputs.paginationClass + '">',
-          pageLinkClass = settings.inputs.paginationLinkClass,
-          activePageClass = settings.inputs.paginationActiveClass,
-          disabledPageClass = settings.inputs.paginationDisabledClass,
-          pages = Math.ceil(settings.dataset.queryRecordCount / settings.dataset.perPage),
-          page = settings.dataset.page,
-          breaks = [
-            settings.inputs.paginationGap[0],
-            settings.dataset.page - settings.inputs.paginationGap[1],
-            settings.dataset.page + settings.inputs.paginationGap[2],
-            (pages + 1) - settings.inputs.paginationGap[3]
-          ];
-
-      pageLinks += '<li><span>Pages: </span></li>';
-
-      for (var i = 1; i <= pages; i++) {
-        if ( (i > breaks[0] && i < breaks[1]) || (i > breaks[2] && i < breaks[3])) {
-          // skip to next iteration in loop
-          continue;
-        } else {
-          var li = obj.paginationLinks.buildLink(i, i, pageLinkClass, page == i, activePageClass),
-              breakIndex,
-              nextBreak;
-
-          // If i is not between one of the following
-          // (1 + (settings.paginationGap[0]))
-          // (page - settings.paginationGap[1])
-          // (page + settings.paginationGap[2])
-          // (pages - settings.paginationGap[3])
-          breakIndex = $.inArray(i, breaks);
-          nextBreak = breaks[breakIndex + 1];
-          if (breakIndex > 0 && i !== 1 && nextBreak && nextBreak > (i + 1)) {
-            var ellip = '<li><span class="dynatable-page-break">&hellip;</span></li>';
-            li = breakIndex < 2 ? ellip + li : li + ellip;
-          }
-
-          if (settings.inputs.paginationPrev && i === 1) {
-            var prevLi = obj.paginationLinks.buildLink(page - 1, settings.inputs.paginationPrev, pageLinkClass + ' ' + settings.inputs.paginationPrevClass, page === 1, disabledPageClass);
-            li = prevLi + li;
-          }
-          if (settings.inputs.paginationNext && i === pages) {
-            var nextLi = obj.paginationLinks.buildLink(page + 1, settings.inputs.paginationNext, pageLinkClass + ' ' + settings.inputs.paginationNextClass, page === pages, disabledPageClass);
-            li += nextLi;
-          }
-
-          pageLinks += li;
-        }
-      }
-
-      pageLinks += '</ul>';
-
-      // only bind page handler to non-active and non-disabled page links
-      var selector = '#dynatable-pagination-links-' + obj.element.id + ' a.' + pageLinkClass + ':not(.' + activePageClass + ',.' + disabledPageClass + ')';
-      // kill any existing delegated-bindings so they don't stack up
-      $(document).undelegate(selector, 'click.dynatable');
-      $(document).delegate(selector, 'click.dynatable', function(e) {
-        $this = $(this);
-        $this.closest(settings.inputs.paginationClass).find('.' + activePageClass).removeClass(activePageClass);
-        $this.addClass(activePageClass);
-
-        obj.paginationPage.set($this.data('dynatable-page'));
-        obj.process();
-        e.preventDefault();
-      });
-
-      return pageLinks;
-    };
-
-    this.buildLink = function(page, label, linkClass, conditional, conditionalClass) {
-      var link = '<a data-dynatable-page=' + page + ' class="' + linkClass,
-          li = '<li';
-
-      if (conditional) {
-        link += ' ' + conditionalClass;
-        li += ' class="' + conditionalClass + '"';
-      }
-
-      link += '">' + label + '</a>';
-      li += '>' + link + '</li>';
-
-      return li;
-    };
-
-    this.attach = function() {
-      // append page links *after* delegate-event-binding so it doesn't need to
-      // find and select all page links to bind event
-      var $target = settings.inputs.paginationLinkTarget ? $(settings.inputs.paginationLinkTarget) : obj.$element;
-      $target[settings.inputs.paginationLinkPlacement](obj.paginationLinks.create());
-    };
-  };
-
-  utility = dt.utility = {
-    normalizeText: function(text, style) {
-      text = this.textTransform[style](text);
-      return text;
-    },
-    textTransform: {
-      trimDash: function(text) {
-        return text.replace(/^\s+|\s+$/g, "").replace(/\s+/g, "-");
-      },
-      camelCase: function(text) {
-        text = this.trimDash(text);
-        return text
-          .replace(/(\-[a-zA-Z])/g, function($1){return $1.toUpperCase().replace('-','');})
-          .replace(/([A-Z])([A-Z]+)/g, function($1,$2,$3){return $2 + $3.toLowerCase();})
-          .replace(/^[A-Z]/, function($1){return $1.toLowerCase();});
-      },
-      dashed: function(text) {
-        text = this.trimDash(text);
-        return this.lowercase(text);
-      },
-      underscore: function(text) {
-        text = this.trimDash(text);
-        return this.lowercase(text.replace(/(-)/g, '_'));
-      },
-      lowercase: function(text) {
-        return text.replace(/([A-Z])/g, function($1){return $1.toLowerCase();});
-      }
-    },
-    // Deserialize params in URL to object
-    // see http://stackoverflow.com/questions/1131630/javascript-jquery-param-inverse-function/3401265#3401265
-    deserialize: function(query) {
-      if (!query) return {};
-      // modified to accept an array of partial URL strings
-      if (typeof(query) === "object") { query = query.join('&'); }
-
-      var hash = {},
-          vars = query.split("&");
-
-      for (var i = 0; i < vars.length; i++) {
-        var pair = vars[i].split("="),
-            k = decodeURIComponent(pair[0]),
-            v, m;
-
-        if (!pair[1]) { continue };
-        v = decodeURIComponent(pair[1].replace(/\+/g, ' '));
-
-        // modified to parse multi-level parameters (e.g. "hi[there][dude]=whatsup" => hi: {there: {dude: "whatsup"}})
-        while (m = k.match(/([^&=]+)\[([^&=]+)\]$/)) {
-          var origV = v;
-          k = m[1];
-          v = {};
-
-          // If nested param ends in '][', then the regex above erroneously included half of a trailing '[]',
-          // which indicates the end-value is part of an array
-          if (m[2].substr(m[2].length-2) == '][') { // must use substr for IE to understand it
-            v[m[2].substr(0,m[2].length-2)] = [origV];
-          } else {
-            v[m[2]] = origV;
-          }
-        }
-
-        // If it is the first entry with this name
-        if (typeof hash[k] === "undefined") {
-          if (k.substr(k.length-2) != '[]') { // not end with []. cannot use negative index as IE doesn't understand it
-            hash[k] = v;
-          } else {
-            hash[k] = [v];
-          }
-        // If subsequent entry with this name and not array
-        } else if (typeof hash[k] === "string") {
-          hash[k] = v;  // replace it
-        // modified to add support for objects
-        } else if (typeof hash[k] === "object") {
-          hash[k] = $.extend({}, hash[k], v);
-        // If subsequent entry with this name and is array
-        } else {
-          hash[k].push(v);
-        }
-      }
-      return hash;
-    },
-    refreshQueryString: function(urlString, data, settings) {
-      var _this = this,
-          queryString = urlString.split('?'),
-          path = queryString.shift(),
-          urlOptions;
-
-      urlOptions = this.deserialize(urlString);
-
-      // Loop through each dynatable param and update the URL with it
-      for (attr in settings.params) {
-        if (settings.params.hasOwnProperty(attr)) {
-          var label = settings.params[attr];
-          // Skip over parameters matching attributes for disabled features (i.e. leave them untouched),
-          // because if the feature is turned off, then parameter name is a coincidence and it's unrelated to dynatable.
-          if (
-            (!settings.features.sort && attr == "sorts") ||
-              (!settings.features.paginate && _this.anyMatch(attr, ["page", "perPage", "offset"], function(attr, param) { return attr == param; }))
-          ) {
-            continue;
-          }
-
-          // Delete page and offset from url params if on page 1 (default)
-          if ((attr === "page" || attr === "offset") && data["page"] === 1) {
-            if (urlOptions[label]) {
-              delete urlOptions[label];
-            }
-            continue;
-          }
-
-          // Delete perPage from url params if default perPage value
-          if (attr === "perPage" && data[label] == settings.dataset.perPageDefault) {
-            if (urlOptions[label]) {
-              delete urlOptions[label];
-            }
-            continue;
-          }
-
-          // For queries, we're going to handle each possible query parameter individually here instead of
-          // handling the entire queries object below, since we need to make sure that this is a query controlled by dynatable.
-          if (attr == "queries" && data[label]) {
-            var queries = settings.inputs.queries || [],
-                inputQueries = $.makeArray(queries.map(function() { return $(this).attr('name') }));
-
-            if (settings.features.search) { inputQueries.push('search'); }
-
-            for (var i = 0, len = inputQueries.length; i < len; i++) {
-              var attr = inputQueries[i];
-              if (data[label][attr]) {
-                if (typeof urlOptions[label] === 'undefined') { urlOptions[label] = {}; }
-                urlOptions[label][attr] = data[label][attr];
-              } else {
-                delete urlOptions[label][attr];
-              }
-            }
-            continue;
-          }
-
-          // If we haven't returned true by now, then we actually want to update the parameter in the URL
-          if (data[label]) {
-            urlOptions[label] = data[label];
-          } else {
-            delete urlOptions[label];
-          }
-        }
-      }
-      return decodeURI($.param(urlOptions));
-    },
-    // Get array of keys from object
-    // see http://stackoverflow.com/questions/208016/how-to-list-the-properties-of-a-javascript-object/208020#208020
-    keysFromObject: function(obj){
-      var keys = [];
-      for (var key in obj){
-        keys.push(key);
-      }
-      return keys;
-    },
-    // Find an object in an array of objects by attributes.
-    // E.g. find object with {id: 'hi', name: 'there'} in an array of objects
-    findObjectInArray: function(array, objectAttr) {
-      var _this = this,
-          foundObject;
-      for (var i = 0, len = array.length; i < len; i++) {
-        var item = array[i];
-        // For each object in array, test to make sure all attributes in objectAttr match
-        if (_this.allMatch(item, objectAttr, function(item, key, value) { return item[key] == value; })) {
-          foundObject = item;
-          break;
-        }
-      }
-      return foundObject;
-    },
-    // Return true if supplied test function passes for ALL items in an array
-    allMatch: function(item, arrayOrObject, test) {
-      // start off with true result by default
-      var match = true,
-          isArray = $.isArray(arrayOrObject);
-      // Loop through all items in array
-      $.each(arrayOrObject, function(key, value) {
-        var result = isArray ? test(item, value) : test(item, key, value);
-        // If a single item tests false, go ahead and break the array by returning false
-        // and return false as result,
-        // otherwise, continue with next iteration in loop
-        // (if we make it through all iterations without overriding match with false,
-        // then we can return the true result we started with by default)
-        if (!result) { return match = false; }
-      });
-      return match;
-    },
-    // Return true if supplied test function passes for ANY items in an array
-    anyMatch: function(item, arrayOrObject, test) {
-      var match = false,
-          isArray = $.isArray(arrayOrObject);
-
-      $.each(arrayOrObject, function(key, value) {
-        var result = isArray ? test(item, value) : test(item, key, value);
-        if (result) {
-          // As soon as a match is found, set match to true, and return false to stop the `$.each` loop
-          match = true;
-          return false;
-        }
-      });
-      return match;
-    },
-    // Return true if two objects are equal
-    // (i.e. have the same attributes and attribute values)
-    objectsEqual: function(a, b) {
-      for (attr in a) {
-        if (a.hasOwnProperty(attr)) {
-          if (!b.hasOwnProperty(attr) || a[attr] !== b[attr]) {
-            return false;
-          }
-        }
-      }
-      for (attr in b) {
-        if (b.hasOwnProperty(attr) && !a.hasOwnProperty(attr)) {
-          return false;
-        }
-      }
-      return true;
-    },
-    // Taken from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/105074#105074
-    randomHash: function() {
-      return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
-    }
-  };
-
-  //-----------------------------------------------------------------
-  // Build the dynatable plugin
-  //-----------------------------------------------------------------
-
-  // Object.create support test, and fallback for browsers without it
-  if ( typeof Object.create !== "function" ) {
-    Object.create = function (o) {
-      function F() {}
-      F.prototype = o;
-      return new F();
-    };
-  }
-
-  //-----------------------------------------------------------------
-  // Global dynatable plugin setting defaults
-  //-----------------------------------------------------------------
-
-  $.dynatableSetup = function(options) {
-    defaults = mergeSettings(options);
-  };
-
-  // Create dynatable plugin based on a defined object
-  $.dynatable = function( object ) {
-    $.fn['dynatable'] = function( options ) {
-      return this.each(function() {
-        if ( ! $.data( this, 'dynatable' ) ) {
-          $.data( this, 'dynatable', Object.create(object).init(this, options) );
-        }
-      });
-    };
-  };
-
-  $.dynatable(dt);
-
-})(jQuery);
 
+    return output;
+};
+
+if (typeof module !== undefined) module.exports = polyline;
+
+},{}],3:[function(require,module,exports){
+(function() {
+	'use strict';
+
+	L.Routing = L.Routing || {};
+
+	L.Routing.Autocomplete = L.Class.extend({
+		options: {
+			timeout: 500,
+			blurTimeout: 100,
+			noResultsMessage: 'No results found.'
+		},
+
+		initialize: function(elem, callback, context, options) {
+			L.setOptions(this, options);
+
+			this._elem = elem;
+			this._resultFn = options.resultFn ? L.Util.bind(options.resultFn, options.resultContext) : null;
+			this._autocomplete = options.autocompleteFn ? L.Util.bind(options.autocompleteFn, options.autocompleteContext) : null;
+			this._selectFn = L.Util.bind(callback, context);
+			this._container = L.DomUtil.create('div', 'leaflet-routing-geocoder-result');
+			this._resultTable = L.DomUtil.create('table', '', this._container);
+
+			// TODO: looks a bit like a kludge to register same for input and keypress -
+			// browsers supporting both will get duplicate events; just registering
+			// input will not catch enter, though.
+			L.DomEvent.addListener(this._elem, 'input', this._keyPressed, this);
+			L.DomEvent.addListener(this._elem, 'keypress', this._keyPressed, this);
+			L.DomEvent.addListener(this._elem, 'keydown', this._keyDown, this);
+			L.DomEvent.addListener(this._elem, 'blur', function() {
+				if (this._isOpen) {
+					this.close();
+				}
+			}, this);
+		},
+
+		close: function() {
+			L.DomUtil.removeClass(this._container, 'leaflet-routing-geocoder-result-open');
+			this._isOpen = false;
+		},
+
+		_open: function() {
+			var rect = this._elem.getBoundingClientRect();
+			if (!this._container.parentElement) {
+				this._container.style.left = (rect.left + window.scrollX) + 'px';
+				this._container.style.top = (rect.bottom + window.scrollY) + 'px';
+				this._container.style.width = (rect.right - rect.left) + 'px';
+				document.body.appendChild(this._container);
+			}
+
+			L.DomUtil.addClass(this._container, 'leaflet-routing-geocoder-result-open');
+			this._isOpen = true;
+		},
+
+		_setResults: function(results) {
+			var i,
+			    tr,
+			    td,
+			    text;
+
+			delete this._selection;
+			this._results = results;
+
+			while (this._resultTable.firstChild) {
+				this._resultTable.removeChild(this._resultTable.firstChild);
+			}
+
+			for (i = 0; i < results.length; i++) {
+				tr = L.DomUtil.create('tr', '', this._resultTable);
+				tr.setAttribute('data-result-index', i);
+				td = L.DomUtil.create('td', '', tr);
+				text = document.createTextNode(results[i].name);
+				td.appendChild(text);
+				// mousedown + click because:
+				// http://stackoverflow.com/questions/10652852/jquery-fire-click-before-blur-event
+				L.DomEvent.addListener(td, 'mousedown', L.DomEvent.preventDefault);
+				L.DomEvent.addListener(td, 'click', this._createClickListener(results[i]));
+			}
+
+			if (!i) {
+				tr = L.DomUtil.create('tr', '', this._resultTable);
+				td = L.DomUtil.create('td', 'leaflet-routing-geocoder-no-results', tr);
+				td.innerHTML = this.options.noResultsMessage;
+			}
+
+			this._open();
+
+			if (results.length > 0) {
+				// Select the first entry
+				this._select(1);
+			}
+		},
+
+		_createClickListener: function(r) {
+			var resultSelected = this._resultSelected(r);
+			return L.bind(function() {
+				this._elem.blur();
+				resultSelected();
+			}, this);
+		},
+
+		_resultSelected: function(r) {
+			return L.bind(function() {
+				this.close();
+				this._elem.value = r.name;
+				this._lastCompletedText = r.name;
+				this._selectFn(r);
+			}, this);
+		},
+
+		_keyPressed: function(e) {
+			var index;
+
+			if (this._isOpen && e.keyCode === 13 && this._selection) {
+				index = parseInt(this._selection.getAttribute('data-result-index'), 10);
+				this._resultSelected(this._results[index])();
+				L.DomEvent.preventDefault(e);
+				return;
+			}
+
+			if (e.keyCode === 13) {
+				this._complete(this._resultFn, true);
+				return;
+			}
+
+			if (this._autocomplete && document.activeElement === this._elem) {
+				if (this._timer) {
+					clearTimeout(this._timer);
+				}
+				this._timer = setTimeout(L.Util.bind(function() { this._complete(this._autocomplete); }, this),
+					this.options.timeout);
+				return;
+			}
+
+			this._unselect();
+		},
+
+		_select: function(dir) {
+			var sel = this._selection;
+			if (sel) {
+				L.DomUtil.removeClass(sel.firstChild, 'leaflet-routing-geocoder-selected');
+				sel = sel[dir > 0 ? 'nextSibling' : 'previousSibling'];
+			}
+			if (!sel) {
+				sel = this._resultTable[dir > 0 ? 'firstChild' : 'lastChild'];
+			}
+
+			if (sel) {
+				L.DomUtil.addClass(sel.firstChild, 'leaflet-routing-geocoder-selected');
+				this._selection = sel;
+			}
+		},
+
+		_unselect: function() {
+			if (this._selection) {
+				L.DomUtil.removeClass(this._selection.firstChild, 'leaflet-routing-geocoder-selected');
+			}
+			delete this._selection;
+		},
+
+		_keyDown: function(e) {
+			if (this._isOpen) {
+				switch (e.keyCode) {
+				// Escape
+				case 27:
+					this.close();
+					L.DomEvent.preventDefault(e);
+					return;
+				// Up
+				case 38:
+					this._select(-1);
+					L.DomEvent.preventDefault(e);
+					return;
+				// Down
+				case 40:
+					this._select(1);
+					L.DomEvent.preventDefault(e);
+					return;
+				}
+			}
+		},
+
+		_complete: function(completeFn, trySelect) {
+			var v = this._elem.value;
+			function completeResults(results) {
+				this._lastCompletedText = v;
+				if (trySelect && results.length === 1) {
+					this._resultSelected(results[0])();
+				} else {
+					this._setResults(results);
+				}
+			}
+
+			if (!v) {
+				return;
+			}
+
+			if (v !== this._lastCompletedText) {
+				completeFn(v, completeResults, this);
+			} else if (trySelect) {
+				completeResults.call(this, this._results);
+			}
+		}
+	});
+})();
+
+},{}],4:[function(require,module,exports){
+(function (global){
+(function() {
+	'use strict';
+
+	var L = (typeof window !== "undefined" ? window.L : typeof global !== "undefined" ? global.L : null);
+
+	L.Routing = L.Routing || {};
+	L.extend(L.Routing, require('./L.Routing.Itinerary'));
+	L.extend(L.Routing, require('./L.Routing.Line'));
+	L.extend(L.Routing, require('./L.Routing.Plan'));
+	L.extend(L.Routing, require('./L.Routing.OSRM'));
+	L.extend(L.Routing, require('./L.Routing.ErrorControl'));
+
+	L.Routing.Control = L.Routing.Itinerary.extend({
+		options: {
+			fitSelectedRoutes: 'smart',
+			routeLine: function(route, options) { return L.Routing.line(route, options); },
+			autoRoute: true,
+			routeWhileDragging: false,
+			routeDragInterval: 500,
+			waypointMode: 'connect',
+			useZoomParameter: false,
+			showAlternatives: false
+		},
+
+		initialize: function(options) {
+			L.Util.setOptions(this, options);
+
+			this._router = this.options.router || new L.Routing.OSRM(options);
+			this._plan = this.options.plan || L.Routing.plan(this.options.waypoints, options);
+			this._requestCount = 0;
+
+			L.Routing.Itinerary.prototype.initialize.call(this, options);
+
+			this.on('routeselected', this._routeSelected, this);
+			this._plan.on('waypointschanged', this._onWaypointsChanged, this);
+			if (options.routeWhileDragging) {
+				this._setupRouteDragging();
+			}
+
+			if (this.options.autoRoute) {
+				this.route();
+			}
+		},
+
+		onAdd: function(map) {
+			var container = L.Routing.Itinerary.prototype.onAdd.call(this, map);
+
+			this._map = map;
+			this._map.addLayer(this._plan);
+
+			if (this.options.useZoomParameter) {
+				this._map.on('zoomend', function() {
+					this.route({
+						callback: L.bind(this._updateLineCallback, this)
+					});
+				}, this);
+			}
+
+			if (this._plan.options.geocoder) {
+				container.insertBefore(this._plan.createGeocoders(), container.firstChild);
+			}
+
+			return container;
+		},
+
+		onRemove: function(map) {
+			if (this._line) {
+				map.removeLayer(this._line);
+			}
+			map.removeLayer(this._plan);
+			return L.Routing.Itinerary.prototype.onRemove.call(this, map);
+		},
+
+		getWaypoints: function() {
+			return this._plan.getWaypoints();
+		},
+
+		setWaypoints: function(waypoints) {
+			this._plan.setWaypoints(waypoints);
+			return this;
+		},
+
+		spliceWaypoints: function() {
+			var removed = this._plan.spliceWaypoints.apply(this._plan, arguments);
+			return removed;
+		},
+
+		getPlan: function() {
+			return this._plan;
+		},
+
+		getRouter: function() {
+			return this._router;
+		},
+
+		_routeSelected: function(e) {
+			var route = e.route,
+				alternatives = this.options.showAlternatives && e.alternatives,
+				fitMode = this.options.fitSelectedRoutes,
+				fitBounds =
+					(fitMode === 'smart' && !this._waypointsVisible()) ||
+					(fitMode !== 'smart' && fitMode);
+
+			this._updateLines({route: route, alternatives: alternatives});
+
+			if (fitBounds) {
+				this._map.fitBounds(this._line.getBounds());
+			}
+
+			if (this.options.waypointMode === 'snap') {
+				this._plan.off('waypointschanged', this._onWaypointsChanged, this);
+				this.setWaypoints(route.waypoints);
+				this._plan.on('waypointschanged', this._onWaypointsChanged, this);
+			}
+		},
+
+		_waypointsVisible: function() {
+			var wps = this.getWaypoints(),
+				mapSize,
+				bounds,
+				boundsSize,
+				i,
+				p;
+
+			try {
+				mapSize = this._map.getSize();
+
+				for (i = 0; i < wps.length; i++) {
+					p = this._map.latLngToLayerPoint(wps[i].latLng);
+
+					if (bounds) {
+						bounds.extend(p);
+					} else {
+						bounds = L.bounds([p]);
+					}
+				}
+
+				boundsSize = bounds.getSize();
+				return (boundsSize.x > mapSize.x / 5 ||
+					boundsSize.y > mapSize.y / 5) && this._waypointsInViewport();
+
+			} catch (e) {
+				return false;
+			}
+		},
+
+		_waypointsInViewport: function() {
+			var wps = this.getWaypoints(),
+				mapBounds,
+				i;
+
+			try {
+				mapBounds = this._map.getBounds();
+			} catch (e) {
+				return false;
+			}
+
+			for (i = 0; i < wps.length; i++) {
+				if (mapBounds.contains(wps[i].latLng)) {
+					return true;
+				}
+			}
+
+			return false;
+		},
+
+		_updateLines: function(routes) {
+			var addWaypoints = this.options.addWaypoints !== undefined ?
+				this.options.addWaypoints : true;
+			this._clearLines();
+
+			// add alternatives first so they lie below the main route
+			this._alternatives = [];
+			if (routes.alternatives) routes.alternatives.forEach(function(alt, i) {
+				this._alternatives[i] = this.options.routeLine(alt,
+					L.extend({
+						isAlternative: true
+					}, this.options.altLineOptions || this.options.lineOptions));
+				this._alternatives[i].addTo(this._map);
+				this._hookAltEvents(this._alternatives[i]);
+			}, this);
+
+			this._line = this.options.routeLine(routes.route,
+				L.extend({
+					addWaypoints: addWaypoints,
+					extendToWaypoints: this.options.waypointMode === 'connect'
+				}, this.options.lineOptions));
+			this._line.addTo(this._map);
+			this._hookEvents(this._line);
+		},
+
+		_hookEvents: function(l) {
+			l.on('linetouched', function(e) {
+				this._plan.dragNewWaypoint(e);
+			}, this);
+		},
+
+		_hookAltEvents: function(l) {
+			l.on('linetouched', function(e) {
+				var alts = this._routes.slice();
+				var selected = alts.splice(e.target._route.routesIndex, 1)[0];
+				this.fire('routeselected', {route: selected, alternatives: alts});
+			}, this);
+		},
+
+		_onWaypointsChanged: function(e) {
+			if (this.options.autoRoute) {
+				this.route({});
+			}
+			if (!this._plan.isReady()) {
+				this._clearLines();
+				this._clearAlts();
+			}
+			this.fire('waypointschanged', {waypoints: e.waypoints});
+		},
+
+		_setupRouteDragging: function() {
+			var timer = 0,
+				waypoints;
+
+			this._plan.on('waypointdrag', L.bind(function(e) {
+				waypoints = e.waypoints;
+
+				if (!timer) {
+					timer = setTimeout(L.bind(function() {
+						this.route({
+							waypoints: waypoints,
+							geometryOnly: true,
+							callback: L.bind(this._updateLineCallback, this)
+						});
+						timer = undefined;
+					}, this), this.options.routeDragInterval);
+				}
+			}, this));
+			this._plan.on('waypointdragend', function() {
+				if (timer) {
+					clearTimeout(timer);
+					timer = undefined;
+				}
+				this.route();
+			}, this);
+		},
+
+		_updateLineCallback: function(err, routes) {
+			if (!err) {
+				this._updateLines({route: routes[0], alternatives: routes.slice(1) });
+			} else {
+				this._clearLines();
+			}
+		},
+
+		route: function(options) {
+			var ts = ++this._requestCount,
+				wps;
+
+			options = options || {};
+
+			if (this._plan.isReady()) {
+				if (this.options.useZoomParameter) {
+					options.z = this._map && this._map.getZoom();
+				}
+
+				wps = options && options.waypoints || this._plan.getWaypoints();
+				this.fire('routingstart', {waypoints: wps});
+				this._router.route(wps, options.callback || function(err, routes) {
+					// Prevent race among multiple requests,
+					// by checking the current request's timestamp
+					// against the last request's; ignore result if
+					// this isn't the latest request.
+					if (ts === this._requestCount) {
+						this._clearLines();
+						this._clearAlts();
+						if (err) {
+							this.fire('routingerror', {error: err});
+							return;
+						}
+
+						routes.forEach(function(route, i) { route.routesIndex = i; });
+
+						if (!options.geometryOnly) {
+							this.fire('routesfound', {waypoints: wps, routes: routes});
+							this.setAlternatives(routes);
+						} else {
+							var selectedRoute = routes.splice(0,1)[0];
+							this._routeSelected({route: selectedRoute, alternatives: routes});
+						}
+					}
+				}, this, options);
+			}
+		},
+
+		_clearLines: function() {
+			if (this._line) {
+				this._map.removeLayer(this._line);
+				delete this._line;
+			}
+			if (this._alternatives && this._alternatives.length) {
+				for (var i in this._alternatives) {
+					this._map.removeLayer(this._alternatives[i]);
+				}
+				this._alternatives = [];
+			}
+		}
+	});
+
+	L.Routing.control = function(options) {
+		return new L.Routing.Control(options);
+	};
+
+	module.exports = L.Routing;
+})();
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./L.Routing.ErrorControl":5,"./L.Routing.Itinerary":8,"./L.Routing.Line":10,"./L.Routing.OSRM":12,"./L.Routing.Plan":13}],5:[function(require,module,exports){
+(function() {
+	'use strict';
+
+	L.Routing = L.Routing || {};
+
+	L.Routing.ErrorControl = L.Control.extend({
+		options: {
+			header: 'Routing error',
+			formatMessage: function(error) {
+				if (error.status < 0) {
+					return 'Calculating the route caused an error. Technical description follows: <code><pre>' +
+						error.message + '</pre></code';
+				} else {
+					return 'The route could not be calculated. ' +
+						error.message;
+				}
+			}
+		},
+
+		initialize: function(routingControl, options) {
+			L.Control.prototype.initialize.call(this, options);
+			routingControl
+				.on('routingerror', L.bind(function(e) {
+					if (this._element) {
+						this._element.children[1].innerHTML = this.options.formatMessage(e.error);
+						this._element.style.visibility = 'visible';
+					}
+				}, this))
+				.on('routingstart', L.bind(function() {
+					if (this._element) {
+						this._element.style.visibility = 'hidden';
+					}
+				}, this));
+		},
+
+		onAdd: function() {
+			var header,
+				message;
+
+			this._element = L.DomUtil.create('div', 'leaflet-bar leaflet-routing-error');
+			this._element.style.visibility = 'hidden';
+
+			header = L.DomUtil.create('h3', null, this._element);
+			message = L.DomUtil.create('span', null, this._element);
+
+			header.innerHTML = this.options.header;
+
+			return this._element;
+		},
+
+		onRemove: function() {
+			delete this._element;
+		}
+	});
+
+	L.Routing.errorControl = function(routingControl, options) {
+		return new L.Routing.ErrorControl(routingControl, options);
+	};
+})();
+
+},{}],6:[function(require,module,exports){
+(function (global){
+(function() {
+	'use strict';
+
+	var L = (typeof window !== "undefined" ? window.L : typeof global !== "undefined" ? global.L : null);
+
+	L.Routing = L.Routing || {};
+
+	L.extend(L.Routing, require('./L.Routing.Localization'));
+
+	L.Routing.Formatter = L.Class.extend({
+		options: {
+			units: 'metric',
+			unitNames: {
+				meters: 'm',
+				kilometers: 'km',
+				yards: 'yd',
+				miles: 'mi',
+				hours: 'h',
+				minutes: 'mín',
+				seconds: 's'
+			},
+			language: 'en',
+			roundingSensitivity: 1,
+			distanceTemplate: '{value} {unit}'
+		},
+
+		initialize: function(options) {
+			L.setOptions(this, options);
+		},
+
+		formatDistance: function(d /* Number (meters) */, sensitivity) {
+			var un = this.options.unitNames,
+				simpleRounding = sensitivity <= 0,
+				round = simpleRounding ? function(v) { return v; } : L.bind(this._round, this),
+			    v,
+			    yards,
+				data,
+				pow10;
+
+			if (this.options.units === 'imperial') {
+				yards = d / 0.9144;
+				if (yards >= 1000) {
+					data = {
+						value: round(d / 1609.344, sensitivity),
+						unit: un.miles
+					};
+				} else {
+					data = {
+						value: round(yards, sensitivity),
+						unit: un.yards
+					};
+				}
+			} else {
+				v = round(d, sensitivity);
+				data = {
+					value: v >= 1000 ? (v / 1000) : v,
+					unit: v >= 1000 ? un.kilometers : un.meters
+				};
+			}
+
+			if (simpleRounding) {
+				pow10 = Math.pow(10, -sensitivity);
+				data.value = Math.round(data.value * pow10) / pow10;
+			}
+
+			return L.Util.template(this.options.distanceTemplate, data);
+		},
+
+		_round: function(d, sensitivity) {
+			var s = sensitivity || this.options.roundingSensitivity,
+				pow10 = Math.pow(10, (Math.floor(d / s) + '').length - 1),
+				r = Math.floor(d / pow10),
+				p = (r > 5) ? pow10 : pow10 / 2;
+
+			return Math.round(d / p) * p;
+		},
+
+		formatTime: function(t /* Number (seconds) */) {
+			if (t > 86400) {
+				return Math.round(t / 3600) + ' h';
+			} else if (t > 3600) {
+				return Math.floor(t / 3600) + ' h ' +
+					Math.round((t % 3600) / 60) + ' min';
+			} else if (t > 300) {
+				return Math.round(t / 60) + ' min';
+			} else if (t > 60) {
+				return Math.floor(t / 60) + ' min' +
+					(t % 60 !== 0 ? ' ' + (t % 60) + ' s' : '');
+			} else {
+				return t + ' s';
+			}
+		},
+
+		formatInstruction: function(instr, i) {
+			if (instr.text === undefined) {
+				return L.Util.template(this._getInstructionTemplate(instr, i),
+					L.extend({
+						exitStr: instr.exit ? L.Routing.Localization[this.options.language].formatOrder(instr.exit) : '',
+						dir: L.Routing.Localization[this.options.language].directions[instr.direction]
+					},
+					instr));
+			} else {
+				return instr.text;
+			}
+		},
+
+		getIconName: function(instr, i) {
+			switch (instr.type) {
+			case 'Straight':
+				return (i === 0 ? 'depart' : 'continue');
+			case 'SlightRight':
+				return 'bear-right';
+			case 'Right':
+				return 'turn-right';
+			case 'SharpRight':
+				return 'sharp-right';
+			case 'TurnAround':
+				return 'u-turn';
+			case 'SharpLeft':
+				return 'sharp-left';
+			case 'Left':
+				return 'turn-left';
+			case 'SlightLeft':
+				return 'bear-left';
+			case 'WaypointReached':
+				return 'via';
+			case 'Roundabout':
+				return 'enter-roundabout';
+			case 'DestinationReached':
+				return 'arrive';
+			}
+		},
+
+		_getInstructionTemplate: function(instr, i) {
+			var type = instr.type === 'Straight' ? (i === 0 ? 'Head' : 'Continue') : instr.type,
+				strings = L.Routing.Localization[this.options.language].instructions[type];
+
+			return strings[0] + (strings.length > 1 && instr.road ? strings[1] : '');
+		}
+	});
+
+	module.exports = L.Routing;
+})();
+
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./L.Routing.Localization":11}],7:[function(require,module,exports){
+(function (global){
+(function() {
+	'use strict';
+
+	var L = (typeof window !== "undefined" ? window.L : typeof global !== "undefined" ? global.L : null);
+	L.Routing = L.Routing || {};
+	L.extend(L.Routing, require('./L.Routing.Autocomplete'));
+
+	function selectInputText(input) {
+		if (input.setSelectionRange) {
+			// On iOS, select() doesn't work
+			input.setSelectionRange(0, 9999);
+		} else {
+			// On at least IE8, setSeleectionRange doesn't exist
+			input.select();
+		}
+	}
+
+	L.Routing.GeocoderElement = L.Class.extend({
+		includes: L.Mixin.Events,
+
+		options: {
+			createGeocoder: function(i, nWps, options) {
+				var container = L.DomUtil.create('div', 'leaflet-routing-geocoder'),
+					input = L.DomUtil.create('input', '', container),
+					remove = options.addWaypoints ? L.DomUtil.create('span', 'leaflet-routing-remove-waypoint', container) : undefined;
+
+				input.disabled = !options.addWaypoints;
+
+				return {
+					container: container,
+					input: input,
+					closeButton: remove
+				};
+			},
+			geocoderPlaceholder: function(i, numberWaypoints, plan) {
+				var l = L.Routing.Localization[plan.options.language].ui;
+				return i === 0 ?
+					l.startPlaceholder :
+					(i < numberWaypoints - 1 ?
+						L.Util.template(l.viaPlaceholder, {viaNumber: i}) :
+						l.endPlaceholder);
+			},
+
+			geocoderClass: function() {
+				return '';
+			},
+
+			waypointNameFallback: function(latLng) {
+				var ns = latLng.lat < 0 ? 'S' : 'N',
+					ew = latLng.lng < 0 ? 'W' : 'E',
+					lat = (Math.round(Math.abs(latLng.lat) * 10000) / 10000).toString(),
+					lng = (Math.round(Math.abs(latLng.lng) * 10000) / 10000).toString();
+				return ns + lat + ', ' + ew + lng;
+			},
+			maxGeocoderTolerance: 200,
+			autocompleteOptions: {},
+			language: 'en',
+		},
+
+		initialize: function(wp, i, nWps, options) {
+			L.setOptions(this, options);
+
+			var g = this.options.createGeocoder(i, nWps, this.options),
+				closeButton = g.closeButton,
+				geocoderInput = g.input;
+			geocoderInput.setAttribute('placeholder', this.options.geocoderPlaceholder(i, nWps, this));
+			geocoderInput.className = this.options.geocoderClass(i, nWps);
+
+			this._element = g;
+			this._waypoint = wp;
+
+			this.update();
+			// This has to be here, or geocoder's value will not be properly
+			// initialized.
+			// TODO: look into why and make _updateWaypointName fix this.
+			geocoderInput.value = wp.name;
+
+			L.DomEvent.addListener(geocoderInput, 'click', function() {
+				selectInputText(this);
+			}, geocoderInput);
+
+			if (closeButton) {
+				L.DomEvent.addListener(closeButton, 'click', function() {
+					this.fire('delete', { waypoint: this._waypoint });
+				}, this);
+			}
+
+			new L.Routing.Autocomplete(geocoderInput, function(r) {
+					geocoderInput.value = r.name;
+					wp.name = r.name;
+					wp.latLng = r.center;
+					this.fire('geocoded', { waypoint: wp, value: r });
+				}, this, L.extend({
+					resultFn: this.options.geocoder.geocode,
+					resultContext: this.options.geocoder,
+					autocompleteFn: this.options.geocoder.suggest,
+					autocompleteContext: this.options.geocoder
+				}, this.options.autocompleteOptions));
+		},
+
+		getContainer: function() {
+			return this._element.container;
+		},
+
+		setValue: function(v) {
+			this._element.input.value = v;
+		},
+
+		update: function(force) {
+			var wp = this._waypoint,
+				wpCoords;
+
+			wp.name = wp.name || '';
+
+			if (wp.latLng && (force || !wp.name)) {
+				wpCoords = this.options.waypointNameFallback(wp.latLng);
+				if (this.options.geocoder && this.options.geocoder.reverse) {
+					this.options.geocoder.reverse(wp.latLng, 67108864 /* zoom 18 */, function(rs) {
+						if (rs.length > 0 && rs[0].center.distanceTo(wp.latLng) < this.options.maxGeocoderTolerance) {
+							wp.name = rs[0].name;
+						} else {
+							wp.name = wpCoords;
+						}
+						this._update();
+					}, this);
+				} else {
+					wp.name = wpCoords;
+					this._update();
+				}
+			}
+		},
+
+		focus: function() {
+			var input = this._element.input;
+			input.focus();
+			selectInputText(input);
+		},
+
+		_update: function() {
+			var wp = this._waypoint,
+			    value = wp && wp.name ? wp.name : '';
+			this.setValue(value);
+			this.fire('reversegeocoded', {waypoint: wp, value: value});
+		}
+	});
+
+	L.Routing.geocoderElement = function(wp, i, nWps, plan) {
+		return new L.Routing.GeocoderElement(wp, i, nWps, plan);
+	};
+
+	module.exports = L.Routing;
+})();
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./L.Routing.Autocomplete":3}],8:[function(require,module,exports){
+(function (global){
+(function() {
+	'use strict';
+
+	var L = (typeof window !== "undefined" ? window.L : typeof global !== "undefined" ? global.L : null);
+
+	L.Routing = L.Routing || {};
+	L.extend(L.Routing, require('./L.Routing.Formatter'));
+	L.extend(L.Routing, require('./L.Routing.ItineraryBuilder'));
+
+	L.Routing.Itinerary = L.Control.extend({
+		includes: L.Mixin.Events,
+
+		options: {
+			pointMarkerStyle: {
+				radius: 5,
+				color: '#03f',
+				fillColor: 'white',
+				opacity: 1,
+				fillOpacity: 0.7
+			},
+			summaryTemplate: '<h2>{name}</h2><h3>{distance}, {time}</h3>',
+			timeTemplate: '{time}',
+			containerClassName: '',
+			alternativeClassName: '',
+			minimizedClassName: '',
+			itineraryClassName: '',
+			totalDistanceRoundingSensitivity: -1,
+			show: true,
+			collapsible: undefined,
+			collapseBtn: function(itinerary) {
+				var collapseBtn = L.DomUtil.create('span', itinerary.options.collapseBtnClass);
+				L.DomEvent.on(collapseBtn, 'click', itinerary._toggle, itinerary);
+				itinerary._container.insertBefore(collapseBtn, itinerary._container.firstChild);
+			},
+			collapseBtnClass: 'leaflet-routing-collapse-btn'
+		},
+
+		initialize: function(options) {
+			L.setOptions(this, options);
+			this._formatter = this.options.formatter || new L.Routing.Formatter(this.options);
+			this._itineraryBuilder = this.options.itineraryBuilder || new L.Routing.ItineraryBuilder({
+				containerClassName: this.options.itineraryClassName
+			});
+		},
+
+		onAdd: function(map) {
+			var collapsible = this.options.collapsible;
+
+			collapsible = collapsible || (collapsible === undefined && map.getSize().x <= 640);
+
+			this._container = L.DomUtil.create('div', 'leaflet-routing-container leaflet-bar ' +
+				(!this.options.show ? 'leaflet-routing-container-hide ' : '') +
+				(collapsible ? 'leaflet-routing-collapsible ' : '') +
+				this.options.containerClassName);
+			this._altContainer = this.createAlternativesContainer();
+			this._container.appendChild(this._altContainer);
+			L.DomEvent.disableClickPropagation(this._container);
+			L.DomEvent.addListener(this._container, 'mousewheel', function(e) {
+				L.DomEvent.stopPropagation(e);
+			});
+
+			if (collapsible) {
+				this.options.collapseBtn(this);
+			}
+
+			return this._container;
+		},
+
+		onRemove: function() {
+		},
+
+		createAlternativesContainer: function() {
+			return L.DomUtil.create('div', 'leaflet-routing-alternatives-container');
+		},
+
+		setAlternatives: function(routes) {
+			var i,
+			    alt,
+			    altDiv;
+
+			this._clearAlts();
+
+			this._routes = routes;
+
+			for (i = 0; i < this._routes.length; i++) {
+				alt = this._routes[i];
+				altDiv = this._createAlternative(alt, i);
+				this._altContainer.appendChild(altDiv);
+				this._altElements.push(altDiv);
+			}
+
+			this._selectRoute({route: this._routes[0], alternatives: this._routes.slice(1)});
+
+			return this;
+		},
+
+		show: function() {
+			L.DomUtil.removeClass(this._container, 'leaflet-routing-container-hide');
+		},
+
+		hide: function() {
+			L.DomUtil.addClass(this._container, 'leaflet-routing-container-hide');
+		},
+
+		_toggle: function() {
+			var collapsed = L.DomUtil.hasClass(this._container, 'leaflet-routing-container-hide');
+			this[collapsed ? 'show' : 'hide']();
+		},
+
+		_createAlternative: function(alt, i) {
+			var altDiv = L.DomUtil.create('div', 'leaflet-routing-alt ' +
+				this.options.alternativeClassName +
+				(i > 0 ? ' leaflet-routing-alt-minimized ' + this.options.minimizedClassName : '')),
+				template = this.options.summaryTemplate,
+				data = L.extend({
+					name: alt.name,
+					distance: this._formatter.formatDistance(alt.summary.totalDistance, this.options.totalDistanceRoundingSensitivity),
+					time: this._formatter.formatTime(alt.summary.totalTime)
+				}, alt);
+			altDiv.innerHTML = typeof(template) === 'function' ? template(data) : L.Util.template(template, data);
+			L.DomEvent.addListener(altDiv, 'click', this._onAltClicked, this);
+			this.on('routeselected', this._selectAlt, this);
+
+			altDiv.appendChild(this._createItineraryContainer(alt));
+			return altDiv;
+		},
+
+		_clearAlts: function() {
+			var el = this._altContainer;
+			while (el && el.firstChild) {
+				el.removeChild(el.firstChild);
+			}
+
+			this._altElements = [];
+		},
+
+		_createItineraryContainer: function(r) {
+			var container = this._itineraryBuilder.createContainer(),
+			    steps = this._itineraryBuilder.createStepsContainer(),
+			    i,
+			    instr,
+			    step,
+			    distance,
+			    text,
+			    icon;
+
+			container.appendChild(steps);
+
+			for (i = 0; i < r.instructions.length; i++) {
+				instr = r.instructions[i];
+				text = this._formatter.formatInstruction(instr, i);
+				distance = this._formatter.formatDistance(instr.distance);
+				icon = this._formatter.getIconName(instr, i);
+				step = this._itineraryBuilder.createStep(text, distance, icon, steps);
+
+				this._addRowListeners(step, r.coordinates[instr.index]);
+			}
+
+			return container;
+		},
+
+		_addRowListeners: function(row, coordinate) {
+			L.DomEvent.addListener(row, 'mouseover', function() {
+				this._marker = L.circleMarker(coordinate,
+					this.options.pointMarkerStyle).addTo(this._map);
+			}, this);
+			L.DomEvent.addListener(row, 'mouseout', function() {
+				if (this._marker) {
+					this._map.removeLayer(this._marker);
+					delete this._marker;
+				}
+			}, this);
+			L.DomEvent.addListener(row, 'click', function(e) {
+				this._map.panTo(coordinate);
+				L.DomEvent.stopPropagation(e);
+			}, this);
+		},
+
+		_onAltClicked: function(e) {
+			var altElem = e.target || window.event.srcElement;
+			while (!L.DomUtil.hasClass(altElem, 'leaflet-routing-alt')) {
+				altElem = altElem.parentElement;
+			}
+
+			var j = this._altElements.indexOf(altElem);
+			var alts = this._routes.slice();
+			var route = alts.splice(j, 1)[0];
+
+			this.fire('routeselected', {
+				route: route,
+				alternatives: alts
+			});
+		},
+
+		_selectAlt: function(e) {
+			var altElem,
+			    j,
+			    n,
+			    classFn;
+
+			altElem = this._altElements[e.route.routesIndex];
+
+			if (L.DomUtil.hasClass(altElem, 'leaflet-routing-alt-minimized')) {
+				for (j = 0; j < this._altElements.length; j++) {
+					n = this._altElements[j];
+					classFn = j === e.route.routesIndex ? 'removeClass' : 'addClass';
+					L.DomUtil[classFn](n, 'leaflet-routing-alt-minimized');
+					if (this.options.minimizedClassName) {
+						L.DomUtil[classFn](n, this.options.minimizedClassName);
+					}
+
+					if (j !== e.route.routesIndex) n.scrollTop = 0;
+				}
+			}
+
+			L.DomEvent.stop(e);
+		},
+
+		_selectRoute: function(routes) {
+			if (this._marker) {
+				this._map.removeLayer(this._marker);
+				delete this._marker;
+			}
+			this.fire('routeselected', routes);
+		}
+	});
+
+	L.Routing.itinerary = function(options) {
+		return new L.Routing.Itinerary(options);
+	};
+
+	module.exports = L.Routing;
+})();
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./L.Routing.Formatter":6,"./L.Routing.ItineraryBuilder":9}],9:[function(require,module,exports){
+(function (global){
+(function() {
+	'use strict';
+
+	var L = (typeof window !== "undefined" ? window.L : typeof global !== "undefined" ? global.L : null);
+	L.Routing = L.Routing || {};
+
+	L.Routing.ItineraryBuilder = L.Class.extend({
+		options: {
+			containerClassName: ''
+		},
+
+		initialize: function(options) {
+			L.setOptions(this, options);
+		},
+
+		createContainer: function(className) {
+			var table = L.DomUtil.create('table', className || ''),
+				colgroup = L.DomUtil.create('colgroup', '', table);
+
+			L.DomUtil.create('col', 'leaflet-routing-instruction-icon', colgroup);
+			L.DomUtil.create('col', 'leaflet-routing-instruction-text', colgroup);
+			L.DomUtil.create('col', 'leaflet-routing-instruction-distance', colgroup);
+
+			return table;
+		},
+
+		createStepsContainer: function() {
+			return L.DomUtil.create('tbody', '');
+		},
+
+		createStep: function(text, distance, icon, steps) {
+			var row = L.DomUtil.create('tr', '', steps),
+				span,
+				td;
+			td = L.DomUtil.create('td', '', row);
+			span = L.DomUtil.create('span', 'leaflet-routing-icon leaflet-routing-icon-'+icon, td);
+			td.appendChild(span);
+			td = L.DomUtil.create('td', '', row);
+			td.appendChild(document.createTextNode(text));
+			td = L.DomUtil.create('td', '', row);
+			td.appendChild(document.createTextNode(distance));
+			return row;
+		}
+	});
+
+	module.exports = L.Routing;
+})();
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],10:[function(require,module,exports){
+(function (global){
+(function() {
+	'use strict';
+
+	var L = (typeof window !== "undefined" ? window.L : typeof global !== "undefined" ? global.L : null);
+
+	L.Routing = L.Routing || {};
+
+	L.Routing.Line = L.LayerGroup.extend({
+		includes: L.Mixin.Events,
+
+		options: {
+			styles: [
+				{color: 'black', opacity: 0.15, weight: 9},
+				{color: 'white', opacity: 0.8, weight: 6},
+				{color: 'red', opacity: 1, weight: 2}
+			],
+			missingRouteStyles: [
+				{color: 'black', opacity: 0.15, weight: 7},
+				{color: 'white', opacity: 0.6, weight: 4},
+				{color: 'gray', opacity: 0.8, weight: 2, dashArray: '7,12'}
+			],
+			addWaypoints: true,
+			extendToWaypoints: true,
+			missingRouteTolerance: 10
+		},
+
+		initialize: function(route, options) {
+			L.setOptions(this, options);
+			L.LayerGroup.prototype.initialize.call(this, options);
+			this._route = route;
+
+			if (this.options.extendToWaypoints) {
+				this._extendToWaypoints();
+			}
+
+			this._addSegment(
+				route.coordinates,
+				this.options.styles,
+				this.options.addWaypoints);
+		},
+
+		addTo: function(map) {
+			map.addLayer(this);
+			return this;
+		},
+		getBounds: function() {
+			return L.latLngBounds(this._route.coordinates);
+		},
+
+		_findWaypointIndices: function() {
+			var wps = this._route.inputWaypoints,
+			    indices = [],
+			    i;
+			for (i = 0; i < wps.length; i++) {
+				indices.push(this._findClosestRoutePoint(wps[i].latLng));
+			}
+
+			return indices;
+		},
+
+		_findClosestRoutePoint: function(latlng) {
+			var minDist = Number.MAX_VALUE,
+				minIndex,
+			    i,
+			    d;
+
+			for (i = this._route.coordinates.length - 1; i >= 0 ; i--) {
+				// TODO: maybe do this in pixel space instead?
+				d = latlng.distanceTo(this._route.coordinates[i]);
+				if (d < minDist) {
+					minIndex = i;
+					minDist = d;
+				}
+			}
+
+			return minIndex;
+		},
+
+		_extendToWaypoints: function() {
+			var wps = this._route.inputWaypoints,
+				wpIndices = this._getWaypointIndices(),
+			    i,
+			    wpLatLng,
+			    routeCoord;
+
+			for (i = 0; i < wps.length; i++) {
+				wpLatLng = wps[i].latLng;
+				routeCoord = L.latLng(this._route.coordinates[wpIndices[i]]);
+				if (wpLatLng.distanceTo(routeCoord) >
+					this.options.missingRouteTolerance) {
+					this._addSegment([wpLatLng, routeCoord],
+						this.options.missingRouteStyles);
+				}
+			}
+		},
+
+		_addSegment: function(coords, styles, mouselistener) {
+			var i,
+				pl;
+
+			for (i = 0; i < styles.length; i++) {
+				pl = L.polyline(coords, styles[i]);
+				this.addLayer(pl);
+				if (mouselistener) {
+					pl.on('mousedown', this._onLineTouched, this);
+				}
+			}
+		},
+
+		_findNearestWpBefore: function(i) {
+			var wpIndices = this._getWaypointIndices(),
+				j = wpIndices.length - 1;
+			while (j >= 0 && wpIndices[j] > i) {
+				j--;
+			}
+
+			return j;
+		},
+
+		_onLineTouched: function(e) {
+			var afterIndex = this._findNearestWpBefore(this._findClosestRoutePoint(e.latlng));
+			this.fire('linetouched', {
+				afterIndex: afterIndex,
+				latlng: e.latlng
+			});
+		},
+
+		_getWaypointIndices: function() {
+			if (!this._wpIndices) {
+				this._wpIndices = this._route.waypointIndices || this._findWaypointIndices();
+			}
+
+			return this._wpIndices;
+		}
+	});
+
+	L.Routing.line = function(route, options) {
+		return new L.Routing.Line(route, options);
+	};
+
+	module.exports = L.Routing;
+})();
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],11:[function(require,module,exports){
+(function() {
+	'use strict';
+	L.Routing = L.Routing || {};
+
+	L.Routing.Localization = {
+		'en': {
+			directions: {
+				N: 'north',
+				NE: 'northeast',
+				E: 'east',
+				SE: 'southeast',
+				S: 'south',
+				SW: 'southwest',
+				W: 'west',
+				NW: 'northwest'
+			},
+			instructions: {
+				// instruction, postfix if the road is named
+				'Head':
+					['Head {dir}', ' on {road}'],
+				'Continue':
+					['Continue {dir}', ' on {road}'],
+				'SlightRight':
+					['Slight right', ' onto {road}'],
+				'Right':
+					['Right', ' onto {road}'],
+				'SharpRight':
+					['Sharp right', ' onto {road}'],
+				'TurnAround':
+					['Turn around'],
+				'SharpLeft':
+					['Sharp left', ' onto {road}'],
+				'Left':
+					['Left', ' onto {road}'],
+				'SlightLeft':
+					['Slight left', ' onto {road}'],
+				'WaypointReached':
+					['Waypoint reached'],
+				'Roundabout':
+					['Take the {exitStr} exit in the roundabout', ' onto {road}'],
+				'DestinationReached':
+					['Destination reached'],
+			},
+			formatOrder: function(n) {
+				var i = n % 10 - 1,
+				suffix = ['st', 'nd', 'rd'];
+
+				return suffix[i] ? n + suffix[i] : n + 'th';
+			},
+			ui: {
+				startPlaceholder: 'Start',
+				viaPlaceholder: 'Via {viaNumber}',
+				endPlaceholder: 'End'
+			}
+		},
+
+		'de': {
+			directions: {
+				N: 'Norden',
+				NE: 'Nordosten',
+				E: 'Osten',
+				SE: 'Südosten',
+				S: 'Süden',
+				SW: 'Südwesten',
+				W: 'Westen',
+				NW: 'Nordwesten'
+			},
+			instructions: {
+				// instruction, postfix if the road is named
+				'Head':
+					['Richtung {dir}', ' auf {road}'],
+				'Continue':
+					['Geradeaus Richtung {dir}', ' auf {road}'],
+				'SlightRight':
+					['Leicht rechts abbiegen', ' auf {road}'],
+				'Right':
+					['Rechts abbiegen', ' auf {road}'],
+				'SharpRight':
+					['Scharf rechts abbiegen', ' auf {road}'],
+				'TurnAround':
+					['Wenden'],
+				'SharpLeft':
+					['Scharf links abbiegen', ' auf {road}'],
+				'Left':
+					['Links abbiegen', ' auf {road}'],
+				'SlightLeft':
+					['Leicht links abbiegen', ' auf {road}'],
+				'WaypointReached':
+					['Zwischenhalt erreicht'],
+				'Roundabout':
+					['Nehmen Sie die {exitStr} Ausfahrt im Kreisverkehr', ' auf {road}'],
+				'DestinationReached':
+					['Sie haben ihr Ziel erreicht'],
+			},
+			formatOrder: function(n) {
+				return n + '.';
+			},
+			ui: {
+				startPlaceholder: 'Start',
+				viaPlaceholder: 'Via {viaNumber}',
+				endPlaceholder: 'Ziel'
+			}
+		},
+
+		'sv': {
+			directions: {
+				N: 'norr',
+				NE: 'nordost',
+				E: 'öst',
+				SE: 'sydost',
+				S: 'syd',
+				SW: 'sydväst',
+				W: 'väst',
+				NW: 'nordväst'
+			},
+			instructions: {
+				// instruction, postfix if the road is named
+				'Head':
+					['Åk åt {dir}', ' på {road}'],
+				'Continue':
+					['Fortsätt {dir}', ' på {road}'],
+				'SlightRight':
+					['Svagt höger', ' på {road}'],
+				'Right':
+					['Sväng höger', ' på {road}'],
+				'SharpRight':
+					['Skarpt höger', ' på {road}'],
+				'TurnAround':
+					['Vänd'],
+				'SharpLeft':
+					['Skarpt vänster', ' på {road}'],
+				'Left':
+					['Sväng vänster', ' på {road}'],
+				'SlightLeft':
+					['Svagt vänster', ' på {road}'],
+				'WaypointReached':
+					['Viapunkt nådd'],
+				'Roundabout':
+					['Tag {exitStr} avfarten i rondellen', ' till {road}'],
+				'DestinationReached':
+					['Framme vid resans mål'],
+			},
+			formatOrder: function(n) {
+				return ['första', 'andra', 'tredje', 'fjärde', 'femte',
+					'sjätte', 'sjunde', 'åttonde', 'nionde', 'tionde'
+					/* Can't possibly be more than ten exits, can there? */][n - 1];
+			},
+			ui: {
+				startPlaceholder: 'Från',
+				viaPlaceholder: 'Via {viaNumber}',
+				endPlaceholder: 'Till'
+			}
+		},
+
+		'sp': {
+			directions: {
+				N: 'norte',
+				NE: 'noreste',
+				E: 'este',
+				SE: 'sureste',
+				S: 'sur',
+				SW: 'suroeste',
+				W: 'oeste',
+				NW: 'noroeste'
+			},
+			instructions: {
+				// instruction, postfix if the road is named
+				'Head':
+					['Derecho {dir}', ' sobre {road}'],
+				'Continue':
+					['Continuar {dir}', ' en {road}'],
+				'SlightRight':
+					['Leve giro a la derecha', ' sobre {road}'],
+				'Right':
+					['Derecha', ' sobre {road}'],
+				'SharpRight':
+					['Giro pronunciado a la derecha', ' sobre {road}'],
+				'TurnAround':
+					['Dar vuelta'],
+				'SharpLeft':
+					['Giro pronunciado a la izquierda', ' sobre {road}'],
+				'Left':
+					['Izquierda', ' en {road}'],
+				'SlightLeft':
+					['Leve giro a la izquierda', ' en {road}'],
+				'WaypointReached':
+					['Llegó a un punto del camino'],
+				'Roundabout':
+					['Tomar {exitStr} salida en la rotonda', ' en {road}'],
+				'DestinationReached':
+					['Llegada a destino'],
+			},
+			formatOrder: function(n) {
+				return n + 'º';
+			},
+			ui: {
+				startPlaceholder: 'Inicio',
+				viaPlaceholder: 'Via {viaNumber}',
+				endPlaceholder: 'Destino'
+			}
+		},
+		'nl': {
+			directions: {
+				N: 'noordelijke',
+				NE: 'noordoostelijke',
+				E: 'oostelijke',
+				SE: 'zuidoostelijke',
+				S: 'zuidelijke',
+				SW: 'zuidewestelijke',
+				W: 'westelijke',
+				NW: 'noordwestelijke'
+			},
+			instructions: {
+				// instruction, postfix if the road is named
+				'Head':
+					['Vertrek in {dir} richting', ' de {road} op'],
+				'Continue':
+					['Ga in {dir} richting', ' de {road} op'],
+				'SlightRight':
+					['Volg de weg naar rechts', ' de {road} op'],
+				'Right':
+					['Ga rechtsaf', ' de {road} op'],
+				'SharpRight':
+					['Ga scherpe bocht naar rechts', ' de {road} op'],
+				'TurnAround':
+					['Keer om'],
+				'SharpLeft':
+					['Ga scherpe bocht naar links', ' de {road} op'],
+				'Left':
+					['Ga linksaf', ' de {road} op'],
+				'SlightLeft':
+					['Volg de weg naar links', ' de {road} op'],
+				'WaypointReached':
+					['Aangekomen bij tussenpunt'],
+				'Roundabout':
+					['Neem de {exitStr} afslag op de rotonde', ' de {road} op'],
+				'DestinationReached':
+					['Aangekomen op eindpunt'],
+			},
+			formatOrder: function(n) {
+				if (n === 1 || n >= 20) {
+					return n + 'ste';
+				} else {
+					return n + 'de';
+				}
+			},
+			ui: {
+				startPlaceholder: 'Vertrekpunt',
+				viaPlaceholder: 'Via {viaNumber}',
+				endPlaceholder: 'Bestemming'
+			}
+		},
+		'fr': {
+			directions: {
+				N: 'nord',
+				NE: 'nord-est',
+				E: 'est',
+				SE: 'sud-est',
+				S: 'sud',
+				SW: 'sud-ouest',
+				W: 'ouest',
+				NW: 'nord-ouest'
+			},
+			instructions: {
+				// instruction, postfix if the road is named
+				'Head':
+					['Tout droit au {dir}', ' sur {road}'],
+				'Continue':
+					['Continuer au {dir}', ' sur {road}'],
+				'SlightRight':
+					['Légèrement à droite', ' sur {road}'],
+				'Right':
+					['A droite', ' sur {road}'],
+				'SharpRight':
+					['Complètement à droite', ' sur {road}'],
+				'TurnAround':
+					['Faire demi-tour'],
+				'SharpLeft':
+					['Complètement à gauche', ' sur {road}'],
+				'Left':
+					['A gauche', ' sur {road}'],
+				'SlightLeft':
+					['Légèrement à gauche', ' sur {road}'],
+				'WaypointReached':
+					['Point d\'étape atteint'],
+				'Roundabout':
+					['Au rond-point, prenez la {exitStr} sortie', ' sur {road}'],
+				'DestinationReached':
+					['Destination atteinte'],
+			},
+			formatOrder: function(n) {
+				return n + 'º';
+			},
+			ui: {
+				startPlaceholder: 'Départ',
+				viaPlaceholder: 'Intermédiaire {viaNumber}',
+				endPlaceholder: 'Arrivée'
+			}
+		},
+		'it': {
+			directions: {
+				N: 'nord',
+				NE: 'nord-est',
+				E: 'est',
+				SE: 'sud-est',
+				S: 'sud',
+				SW: 'sud-ovest',
+				W: 'ovest',
+				NW: 'nord-ovest'
+			},
+			instructions: {
+				// instruction, postfix if the road is named
+				'Head':
+					['Dritto verso {dir}', ' su {road}'],
+				'Continue':
+					['Continuare verso {dir}', ' su {road}'],
+				'SlightRight':
+					['Mantenere la destra', ' su {road}'],
+				'Right':
+					['A destra', ' su {road}'],
+				'SharpRight':
+					['Strettamente a destra', ' su {road}'],
+				'TurnAround':
+					['Fare inversione di marcia'],
+				'SharpLeft':
+					['Strettamente a sinistra', ' su {road}'],
+				'Left':
+					['A sinistra', ' sur {road}'],
+				'SlightLeft':
+					['Mantenere la sinistra', ' su {road}'],
+				'WaypointReached':
+					['Punto di passaggio raggiunto'],
+				'Roundabout':
+					['Alla rotonda, prendere la {exitStr} uscita'],
+				'DestinationReached':
+					['Destinazione raggiunta'],
+			},
+			formatOrder: function(n) {
+				return n + 'º';
+			},
+			ui: {
+				startPlaceholder: 'Partenza',
+				viaPlaceholder: 'Intermedia {viaNumber}',
+				endPlaceholder: 'Destinazione'
+			}
+		},
+		'pt': {
+			directions: {
+				N: 'norte',
+				NE: 'nordeste',
+				E: 'leste',
+				SE: 'sudeste',
+				S: 'sul',
+				SW: 'sudoeste',
+				W: 'oeste',
+				NW: 'noroeste'
+			},
+			instructions: {
+				// instruction, postfix if the road is named
+				'Head':
+					['Siga {dir}', ' na {road}'],
+				'Continue':
+					['Continue {dir}', ' na {road}'],
+				'SlightRight':
+					['Curva ligeira a direita', ' na {road}'],
+				'Right':
+					['Curva a direita', ' na {road}'],
+				'SharpRight':
+					['Curva fechada a direita', ' na {road}'],
+				'TurnAround':
+					['Retorne'],
+				'SharpLeft':
+					['Curva fechada a esquerda', ' na {road}'],
+				'Left':
+					['Curva a esquerda', ' na {road}'],
+				'SlightLeft':
+					['Curva ligueira a esquerda', ' na {road}'],
+				'WaypointReached':
+					['Ponto de interesse atingido'],
+				'Roundabout':
+					['Pegue a {exitStr} saída na rotatória', ' na {road}'],
+				'DestinationReached':
+					['Destino atingido'],
+			},
+			formatOrder: function(n) {
+				return n + 'º';
+			},
+			ui: {
+				startPlaceholder: 'Origem',
+				viaPlaceholder: 'Intermédio {viaNumber}',
+				endPlaceholder: 'Destino'
+			}
+		},
+		'sk': {
+			directions: {
+				N: 'sever',
+				NE: 'serverovýchod',
+				E: 'východ',
+				SE: 'juhovýchod',
+				S: 'juh',
+				SW: 'juhozápad',
+				W: 'západ',
+				NW: 'serverozápad'
+			},
+			instructions: {
+				// instruction, postfix if the road is named
+				'Head':
+					['Mierte na {dir}', ' na {road}'],
+				'Continue':
+					['Pokračujte na {dir}', ' na {road}'],
+				'SlightRight':
+					['Mierne doprava', ' na {road}'],
+				'Right':
+					['Doprava', ' na {road}'],
+				'SharpRight':
+					['Prudko doprava', ' na {road}'],
+				'TurnAround':
+					['Otočte sa'],
+				'SharpLeft':
+					['Prudko doľava', ' na {road}'],
+				'Left':
+					['Doľava', ' na {road}'],
+				'SlightLeft':
+					['Mierne doľava', ' na {road}'],
+				'WaypointReached':
+					['Ste v prejazdovom bode.'],
+				'Roundabout':
+					['Odbočte na {exitStr} výjazde', ' na {road}'],
+				'DestinationReached':
+					['Prišli ste do cieľa.'],
+			},
+			formatOrder: function(n) {
+				var i = n % 10 - 1,
+				suffix = ['.', '.', '.'];
+
+				return suffix[i] ? n + suffix[i] : n + '.';
+			},
+			ui: {
+				startPlaceholder: 'Začiatok',
+				viaPlaceholder: 'Cez {viaNumber}',
+				endPlaceholder: 'Koniec'
+			}
+		},
+		'el': {
+			directions: {
+				N: 'βόρεια',
+				NE: 'βορειοανατολικά',
+				E: 'ανατολικά',
+				SE: 'νοτιοανατολικά',
+				S: 'νότια',
+				SW: 'νοτιοδυτικά',
+				W: 'δυτικά',
+				NW: 'βορειοδυτικά'
+			},
+			instructions: {
+				// instruction, postfix if the road is named
+				'Head':
+					['Κατευθυνθείτε {dir}', ' στην {road}'],
+				'Continue':
+					['Συνεχίστε {dir}', ' στην {road}'],
+				'SlightRight':
+					['Ελαφρώς δεξιά', ' στην {road}'],
+				'Right':
+					['Δεξιά', ' στην {road}'],
+				'SharpRight':
+					['Απότομη δεξιά στροφή', ' στην {road}'],
+				'TurnAround':
+					['Κάντε αναστροφή'],
+				'SharpLeft':
+					['Απότομη αριστερή στροφή', ' στην {road}'],
+				'Left':
+					['Αριστερά', ' στην {road}'],
+				'SlightLeft':
+					['Ελαφρώς αριστερά', ' στην {road}'],
+				'WaypointReached':
+					['Φτάσατε στο σημείο αναφοράς'],
+				'Roundabout':
+					['Ακολουθήστε την {exitStr} έξοδο στο κυκλικό κόμβο', ' στην {road}'],
+				'DestinationReached':
+					['Φτάσατε στον προορισμό σας'],
+			},
+			formatOrder: function(n) {
+				return n + 'º';
+			},
+			ui: {
+				startPlaceholder: 'Αφετηρία',
+				viaPlaceholder: 'μέσω {viaNumber}',
+				endPlaceholder: 'Προορισμός'
+			}
+		}
+	};
+
+	module.exports = L.Routing;
+})();
+
+},{}],12:[function(require,module,exports){
+(function (global){
+(function() {
+	'use strict';
+
+	var L = (typeof window !== "undefined" ? window.L : typeof global !== "undefined" ? global.L : null),
+		corslite = require('corslite'),
+		polyline = require('polyline');
+
+	// Ignore camelcase naming for this file, since OSRM's API uses
+	// underscores.
+	/* jshint camelcase: false */
+
+	L.Routing = L.Routing || {};
+	L.extend(L.Routing, require('./L.Routing.Waypoint'));
+
+	L.Routing.OSRM = L.Class.extend({
+		options: {
+			serviceUrl: 'https://router.project-osrm.org/viaroute',
+			timeout: 30 * 1000,
+			routingOptions: {},
+			polylinePrecision: 6
+		},
+
+		initialize: function(options) {
+			L.Util.setOptions(this, options);
+			this._hints = {
+				locations: {}
+			};
+		},
+
+		route: function(waypoints, callback, context, options) {
+			var timedOut = false,
+				wps = [],
+				url,
+				timer,
+				wp,
+				i;
+
+			url = this.buildRouteUrl(waypoints, L.extend({}, this.options.routingOptions, options));
+
+			timer = setTimeout(function() {
+				timedOut = true;
+				callback.call(context || callback, {
+					status: -1,
+					message: 'OSRM request timed out.'
+				});
+			}, this.options.timeout);
+
+			// Create a copy of the waypoints, since they
+			// might otherwise be asynchronously modified while
+			// the request is being processed.
+			for (i = 0; i < waypoints.length; i++) {
+				wp = waypoints[i];
+				wps.push(new L.Routing.Waypoint(wp.latLng, wp.name, wp.options));
+			}
+
+			corslite(url, L.bind(function(err, resp) {
+				var data,
+					errorMessage,
+					statusCode;
+
+				clearTimeout(timer);
+				if (!timedOut) {
+					errorMessage = 'HTTP request failed: ' + err;
+					statusCode = -1;
+
+					if (!err) {
+						try {
+							data = JSON.parse(resp.responseText);
+							try {
+								return this._routeDone(data, wps, callback, context);
+							} catch (ex) {
+								statusCode = -3;
+								errorMessage = ex.toString();
+							}
+						} catch (ex) {
+							statusCode = -2;
+							errorMessage = 'Error parsing OSRM response: ' + ex.toString();
+						}
+					}
+
+					callback.call(context || callback, {
+						status: statusCode,
+						message: errorMessage
+					});
+				}
+			}, this));
+
+			return this;
+		},
+
+		_routeDone: function(response, inputWaypoints, callback, context) {
+			var coordinates,
+			    alts,
+			    actualWaypoints,
+			    i;
+
+			context = context || callback;
+			if (response.status !== 0 && response.status !== 200) {
+				callback.call(context, {
+					status: response.status,
+					message: response.status_message
+				});
+				return;
+			}
+
+			coordinates = this._decodePolyline(response.route_geometry);
+			actualWaypoints = this._toWaypoints(inputWaypoints, response.via_points);
+			alts = [{
+				name: this._createName(response.route_name),
+				coordinates: coordinates,
+				instructions: response.route_instructions ? this._convertInstructions(response.route_instructions) : [],
+				summary: response.route_summary ? this._convertSummary(response.route_summary) : [],
+				inputWaypoints: inputWaypoints,
+				waypoints: actualWaypoints,
+				waypointIndices: this._clampIndices(response.via_indices, coordinates)
+			}];
+
+			if (response.alternative_geometries) {
+				for (i = 0; i < response.alternative_geometries.length; i++) {
+					coordinates = this._decodePolyline(response.alternative_geometries[i]);
+					alts.push({
+						name: this._createName(response.alternative_names[i]),
+						coordinates: coordinates,
+						instructions: response.alternative_instructions[i] ? this._convertInstructions(response.alternative_instructions[i]) : [],
+						summary: response.alternative_summaries[i] ? this._convertSummary(response.alternative_summaries[i]) : [],
+						inputWaypoints: inputWaypoints,
+						waypoints: actualWaypoints,
+						waypointIndices: this._clampIndices(response.alternative_geometries.length === 1 ?
+							// Unsure if this is a bug in OSRM or not, but alternative_indices
+							// does not appear to be an array of arrays, at least not when there is
+							// a single alternative route.
+							response.alternative_indices : response.alternative_indices[i],
+							coordinates)
+					});
+				}
+			}
+
+			// only versions <4.5.0 will support this flag
+			if (response.hint_data) {
+				this._saveHintData(response.hint_data, inputWaypoints);
+			}
+			callback.call(context, null, alts);
+		},
+
+		_decodePolyline: function(routeGeometry) {
+			var cs = polyline.decode(routeGeometry, this.options.polylinePrecision),
+				result = new Array(cs.length),
+				i;
+			for (i = cs.length - 1; i >= 0; i--) {
+				result[i] = L.latLng(cs[i]);
+			}
+
+			return result;
+		},
+
+		_toWaypoints: function(inputWaypoints, vias) {
+			var wps = [],
+			    i;
+			for (i = 0; i < vias.length; i++) {
+				wps.push(L.Routing.waypoint(L.latLng(vias[i]),
+				                            inputWaypoints[i].name,
+				                            inputWaypoints[i].options));
+			}
+
+			return wps;
+		},
+
+		_createName: function(nameParts) {
+			var name = '',
+				i;
+
+			for (i = 0; i < nameParts.length; i++) {
+				if (nameParts[i]) {
+					if (name) {
+						name += ', ';
+					}
+					name += nameParts[i].charAt(0).toUpperCase() + nameParts[i].slice(1);
+				}
+			}
+
+			return name;
+		},
+
+		buildRouteUrl: function(waypoints, options) {
+			var locs = [],
+				wp,
+			    computeInstructions,
+			    computeAlternative,
+			    locationKey,
+			    hint;
+
+			for (var i = 0; i < waypoints.length; i++) {
+				wp = waypoints[i];
+				locationKey = this._locationKey(wp.latLng);
+				locs.push('loc=' + locationKey);
+
+				hint = this._hints.locations[locationKey];
+				if (hint) {
+					locs.push('hint=' + hint);
+				}
+
+				if (wp.options && wp.options.allowUTurn) {
+					locs.push('u=true');
+				}
+			}
+
+			computeAlternative = computeInstructions =
+				!(options && options.geometryOnly);
+
+			return this.options.serviceUrl + '?' +
+				'instructions=' + computeInstructions.toString() + '&' +
+				'alt=' + computeAlternative.toString() + '&' +
+				(options.z ? 'z=' + options.z + '&' : '') +
+				locs.join('&') +
+				(this._hints.checksum !== undefined ? '&checksum=' + this._hints.checksum : '') +
+				(options.fileformat ? '&output=' + options.fileformat : '') +
+				(options.allowUTurns ? '&uturns=' + options.allowUTurns : '');
+		},
+
+		_locationKey: function(location) {
+			return location.lat + ',' + location.lng;
+		},
+
+		_saveHintData: function(hintData, waypoints) {
+			var loc;
+			this._hints = {
+				checksum: hintData.checksum,
+				locations: {}
+			};
+			for (var i = hintData.locations.length - 1; i >= 0; i--) {
+				loc = waypoints[i].latLng;
+				this._hints.locations[this._locationKey(loc)] = hintData.locations[i];
+			}
+		},
+
+		_convertSummary: function(osrmSummary) {
+			return {
+				totalDistance: osrmSummary.total_distance,
+				totalTime: osrmSummary.total_time
+			};
+		},
+
+		_convertInstructions: function(osrmInstructions) {
+			var result = [],
+			    i,
+			    instr,
+			    type,
+			    driveDir;
+
+			for (i = 0; i < osrmInstructions.length; i++) {
+				instr = osrmInstructions[i];
+				type = this._drivingDirectionType(instr[0]);
+				driveDir = instr[0].split('-');
+				if (type) {
+					result.push({
+						type: type,
+						distance: instr[2],
+						time: instr[4],
+						road: instr[1],
+						direction: instr[6],
+						exit: driveDir.length > 1 ? driveDir[1] : undefined,
+						index: instr[3]
+					});
+				}
+			}
+
+			return result;
+		},
+
+		_drivingDirectionType: function(d) {
+			switch (parseInt(d, 10)) {
+			case 1:
+				return 'Straight';
+			case 2:
+				return 'SlightRight';
+			case 3:
+				return 'Right';
+			case 4:
+				return 'SharpRight';
+			case 5:
+				return 'TurnAround';
+			case 6:
+				return 'SharpLeft';
+			case 7:
+				return 'Left';
+			case 8:
+				return 'SlightLeft';
+			case 9:
+				return 'WaypointReached';
+			case 10:
+				// TODO: "Head on"
+				// https://github.com/DennisOSRM/Project-OSRM/blob/master/DataStructures/TurnInstructions.h#L48
+				return 'Straight';
+			case 11:
+			case 12:
+				return 'Roundabout';
+			case 15:
+				return 'DestinationReached';
+			default:
+				return null;
+			}
+		},
+
+		_clampIndices: function(indices, coords) {
+			var maxCoordIndex = coords.length - 1,
+				i;
+			for (i = 0; i < indices.length; i++) {
+				indices[i] = Math.min(maxCoordIndex, Math.max(indices[i], 0));
+			}
+			return indices;
+		}
+	});
+
+	L.Routing.osrm = function(options) {
+		return new L.Routing.OSRM(options);
+	};
+
+	module.exports = L.Routing;
+})();
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./L.Routing.Waypoint":14,"corslite":1,"polyline":2}],13:[function(require,module,exports){
+(function (global){
+(function() {
+	'use strict';
+
+	var L = (typeof window !== "undefined" ? window.L : typeof global !== "undefined" ? global.L : null);
+	L.Routing = L.Routing || {};
+	L.extend(L.Routing, require('./L.Routing.GeocoderElement'));
+	L.extend(L.Routing, require('./L.Routing.Waypoint'));
+
+	L.Routing.Plan = L.Class.extend({
+		includes: L.Mixin.Events,
+
+		options: {
+			dragStyles: [
+				{color: 'black', opacity: 0.15, weight: 9},
+				{color: 'white', opacity: 0.8, weight: 6},
+				{color: 'red', opacity: 1, weight: 2, dashArray: '7,12'}
+			],
+			draggableWaypoints: true,
+			routeWhileDragging: false,
+			addWaypoints: true,
+			reverseWaypoints: false,
+			addButtonClassName: '',
+			language: 'en',
+			createGeocoderElement: L.Routing.geocoderElement,
+			createMarker: function(i, wp) {
+				var options = {
+						draggable: this.draggableWaypoints
+					},
+				    marker = L.marker(wp.latLng, options);
+
+				return marker;
+			},
+			geocodersClassName: ''
+		},
+
+		initialize: function(waypoints, options) {
+			L.Util.setOptions(this, options);
+			this._waypoints = [];
+			this.setWaypoints(waypoints);
+		},
+
+		isReady: function() {
+			var i;
+			for (i = 0; i < this._waypoints.length; i++) {
+				if (!this._waypoints[i].latLng) {
+					return false;
+				}
+			}
+
+			return true;
+		},
+
+		getWaypoints: function() {
+			var i,
+				wps = [];
+
+			for (i = 0; i < this._waypoints.length; i++) {
+				wps.push(this._waypoints[i]);
+			}
+
+			return wps;
+		},
+
+		setWaypoints: function(waypoints) {
+			var args = [0, this._waypoints.length].concat(waypoints);
+			this.spliceWaypoints.apply(this, args);
+			return this;
+		},
+
+		spliceWaypoints: function() {
+			var args = [arguments[0], arguments[1]],
+			    i;
+
+			for (i = 2; i < arguments.length; i++) {
+				args.push(arguments[i] && arguments[i].hasOwnProperty('latLng') ? arguments[i] : L.Routing.waypoint(arguments[i]));
+			}
+
+			[].splice.apply(this._waypoints, args);
+
+			// Make sure there's always at least two waypoints
+			while (this._waypoints.length < 2) {
+				this.spliceWaypoints(this._waypoints.length, 0, null);
+			}
+
+			this._updateMarkers();
+			this._fireChanged.apply(this, args);
+		},
+
+		onAdd: function(map) {
+			this._map = map;
+			this._updateMarkers();
+		},
+
+		onRemove: function() {
+			var i;
+			this._removeMarkers();
+
+			if (this._newWp) {
+				for (i = 0; i < this._newWp.lines.length; i++) {
+					this._map.removeLayer(this._newWp.lines[i]);
+				}
+			}
+
+			delete this._map;
+		},
+
+		createGeocoders: function() {
+			var container = L.DomUtil.create('div', 'leaflet-routing-geocoders ' + this.options.geocodersClassName),
+				waypoints = this._waypoints,
+			    addWpBtn,
+			    reverseBtn;
+
+			this._geocoderContainer = container;
+			this._geocoderElems = [];
+
+
+			if (this.options.addWaypoints) {
+				addWpBtn = L.DomUtil.create('button', 'leaflet-routing-add-waypoint ' + this.options.addButtonClassName, container);
+				addWpBtn.setAttribute('type', 'button');
+				L.DomEvent.addListener(addWpBtn, 'click', function() {
+					this.spliceWaypoints(waypoints.length, 0, null);
+				}, this);
+			}
+
+			if (this.options.reverseWaypoints) {
+				reverseBtn = L.DomUtil.create('button', 'leaflet-routing-reverse-waypoints', container);
+				reverseBtn.setAttribute('type', 'button');
+				L.DomEvent.addListener(reverseBtn, 'click', function() {
+					this._waypoints.reverse();
+					this.setWaypoints(this._waypoints);
+				}, this);
+			}
+
+			this._updateGeocoders();
+			this.on('waypointsspliced', this._updateGeocoders);
+
+			return container;
+		},
+
+		_createGeocoder: function(i) {
+			var geocoder = this.options.createGeocoderElement(this._waypoints[i], i, this._waypoints.length, this.options);
+			geocoder
+			.on('delete', function() {
+				if (i > 0 || this._waypoints.length > 2) {
+					this.spliceWaypoints(i, 1);
+				} else {
+					this.spliceWaypoints(i, 1, new L.Routing.Waypoint());
+				}
+			}, this)
+			.on('geocoded', function(e) {
+				this._updateMarkers();
+				this._fireChanged();
+				this._focusGeocoder(i + 1);
+				this.fire('waypointgeocoded', {
+					waypointIndex: i,
+					waypoint: e.waypoint
+				});
+			}, this)
+			.on('reversegeocoded', function(e) {
+				this.fire('waypointgeocoded', {
+					waypointIndex: i,
+					waypoint: e.waypoint
+				});
+			}, this);
+
+			return geocoder;
+		},
+
+		_updateGeocoders: function() {
+			var elems = [],
+				i,
+			    geocoderElem;
+
+			for (i = 0; i < this._geocoderElems.length; i++) {
+				this._geocoderContainer.removeChild(this._geocoderElems[i].getContainer());
+			}
+
+			for (i = this._waypoints.length - 1; i >= 0; i--) {
+				geocoderElem = this._createGeocoder(i);
+				this._geocoderContainer.insertBefore(geocoderElem.getContainer(), this._geocoderContainer.firstChild);
+				elems.push(geocoderElem);
+			}
+
+			this._geocoderElems = elems.reverse();
+		},
+
+		_removeMarkers: function() {
+			var i;
+			if (this._markers) {
+				for (i = 0; i < this._markers.length; i++) {
+					if (this._markers[i]) {
+						this._map.removeLayer(this._markers[i]);
+					}
+				}
+			}
+			this._markers = [];
+		},
+
+		_updateMarkers: function() {
+			var i,
+			    m;
+
+			if (!this._map) {
+				return;
+			}
+
+			this._removeMarkers();
+
+			for (i = 0; i < this._waypoints.length; i++) {
+				if (this._waypoints[i].latLng) {
+					m = this.options.createMarker(i, this._waypoints[i], this._waypoints.length);
+					if (m) {
+						m.addTo(this._map);
+						if (this.options.draggableWaypoints) {
+							this._hookWaypointEvents(m, i);
+						}
+					}
+				} else {
+					m = null;
+				}
+				this._markers.push(m);
+			}
+		},
+
+		_fireChanged: function() {
+			this.fire('waypointschanged', {waypoints: this.getWaypoints()});
+
+			if (arguments.length >= 2) {
+				this.fire('waypointsspliced', {
+					index: Array.prototype.shift.call(arguments),
+					nRemoved: Array.prototype.shift.call(arguments),
+					added: arguments
+				});
+			}
+		},
+
+		_hookWaypointEvents: function(m, i, trackMouseMove) {
+			var eventLatLng = function(e) {
+					return trackMouseMove ? e.latlng : e.target.getLatLng();
+				},
+				dragStart = L.bind(function(e) {
+					this.fire('waypointdragstart', {index: i, latlng: eventLatLng(e)});
+				}, this),
+				drag = L.bind(function(e) {
+					this._waypoints[i].latLng = eventLatLng(e);
+					this.fire('waypointdrag', {index: i, latlng: eventLatLng(e)});
+				}, this),
+				dragEnd = L.bind(function(e) {
+					this._waypoints[i].latLng = eventLatLng(e);
+					this._waypoints[i].name = '';
+					if (this._geocoderElems) {
+						this._geocoderElems[i].update(true);
+					}
+					this.fire('waypointdragend', {index: i, latlng: eventLatLng(e)});
+					this._fireChanged();
+				}, this),
+				mouseMove,
+				mouseUp;
+
+			if (trackMouseMove) {
+				mouseMove = L.bind(function(e) {
+					this._markers[i].setLatLng(e.latlng);
+					drag(e);
+				}, this);
+				mouseUp = L.bind(function(e) {
+					this._map.dragging.enable();
+					this._map.off('mouseup', mouseUp);
+					this._map.off('mousemove', mouseMove);
+					dragEnd(e);
+				}, this);
+				this._map.dragging.disable();
+				this._map.on('mousemove', mouseMove);
+				this._map.on('mouseup', mouseUp);
+				dragStart({latlng: this._waypoints[i].latLng});
+			} else {
+				m.on('dragstart', dragStart);
+				m.on('drag', drag);
+				m.on('dragend', dragEnd);
+			}
+		},
+
+		dragNewWaypoint: function(e) {
+			var newWpIndex = e.afterIndex + 1;
+			if (this.options.routeWhileDragging) {
+				this.spliceWaypoints(newWpIndex, 0, e.latlng);
+				this._hookWaypointEvents(this._markers[newWpIndex], newWpIndex, true);
+			} else {
+				this._dragNewWaypoint(newWpIndex, e.latlng);
+			}
+		},
+
+		_dragNewWaypoint: function(newWpIndex, initialLatLng) {
+			var wp = new L.Routing.Waypoint(initialLatLng),
+				prevWp = this._waypoints[newWpIndex - 1],
+				nextWp = this._waypoints[newWpIndex],
+				marker = this.options.createMarker(newWpIndex, wp, this._waypoints.length + 1),
+				lines = [],
+				mouseMove = L.bind(function(e) {
+					var i;
+					if (marker) {
+						marker.setLatLng(e.latlng);
+					}
+					for (i = 0; i < lines.length; i++) {
+						lines[i].spliceLatLngs(1, 1, e.latlng);
+					}
+				}, this),
+				mouseUp = L.bind(function(e) {
+					var i;
+					if (marker) {
+						this._map.removeLayer(marker);
+					}
+					for (i = 0; i < lines.length; i++) {
+						this._map.removeLayer(lines[i]);
+					}
+					this._map.off('mousemove', mouseMove);
+					this._map.off('mouseup', mouseUp);
+					this.spliceWaypoints(newWpIndex, 0, e.latlng);
+				}, this),
+				i;
+
+			if (marker) {
+				marker.addTo(this._map);
+			}
+
+			for (i = 0; i < this.options.dragStyles.length; i++) {
+				lines.push(L.polyline([prevWp.latLng, initialLatLng, nextWp.latLng],
+					this.options.dragStyles[i]).addTo(this._map));
+			}
+
+			this._map.on('mousemove', mouseMove);
+			this._map.on('mouseup', mouseUp);
+		},
+
+		_focusGeocoder: function(i) {
+			if (this._geocoderElems[i]) {
+				this._geocoderElems[i].focus();
+			} else {
+				document.activeElement.blur();
+			}
+		}
+	});
+
+	L.Routing.plan = function(waypoints, options) {
+		return new L.Routing.Plan(waypoints, options);
+	};
+
+	module.exports = L.Routing;
+})();
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./L.Routing.GeocoderElement":7,"./L.Routing.Waypoint":14}],14:[function(require,module,exports){
+(function (global){
+(function() {
+	'use strict';
+
+	var L = (typeof window !== "undefined" ? window.L : typeof global !== "undefined" ? global.L : null);
+	L.Routing = L.Routing || {};
+
+	L.Routing.Waypoint = L.Class.extend({
+			options: {
+				allowUTurn: false,
+			},
+			initialize: function(latLng, name, options) {
+				L.Util.setOptions(this, options);
+				this.latLng = L.latLng(latLng);
+				this.name = name;
+			}
+		});
+
+	L.Routing.waypoint = function(latLng, name, options) {
+		return new L.Routing.Waypoint(latLng, name, options);
+	};
+
+	module.exports = L.Routing;
+})();
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}]},{},[4])(4)
+});
 /*! nouislider - 8.3.0 - 2016-02-14 17:37:19 */
 
 (function (factory) {
