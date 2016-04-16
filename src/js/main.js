@@ -555,8 +555,10 @@ $('#buttonAHP').click(function() {
   $('.sidebar-tabs ul li:first-child').addClass('active');
   $('.sidebar-content div:first-child').addClass('active');
   $('#schoolTable tr td:nth-child(3)').show();
+  $('.sidebar-tabs ul li:first-child').show();
 
   $('#schoolTable tbody tr').append('<td>?</td>');
+  calcSuccess();
   boldTableResult();
 });
 

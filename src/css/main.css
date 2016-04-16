@@ -111,4 +111,14 @@ h1.sidebar-header {
     background-color: #0059a6;
     border-color: #0059a6; }
 
+.slider-pane > .slider-label-container:first-child {
+  margin-top: 10px; }
+
+.slider-instruction {
+  margin-top: 10px;
+  margin-bottom: -20px; }
+
+.sidebar-tabs ul li:first-child {
+  display: none; }
+
 /*# sourceMappingURL=main.css.map */
