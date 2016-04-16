@@ -507,7 +507,6 @@ $('#inputPostalCode').change(function() {
 $('#buttonAHP').click(function() {
   getCoord($('#inputPostalCode').val());
   relaRanking = calcWeight();
-  console.log(relaRanking);
   var RankingMatrix = [];
   var schoolRank = [];
   //Get inverse distance
@@ -558,6 +557,7 @@ $('#buttonAHP').click(function() {
   $('#schoolTable tr td:nth-child(3)').show();
 
   $('#schoolTable tbody tr').append('<td>?</td>');
+  boldTableResult();
 });
 
 // Stream Input
@@ -609,21 +609,27 @@ function calcSuccess(){
       result.push('-');
     } else if (psleScore < scoresToCompare[i]) {
       result.push('No');
-    } else {
+    } else if (psleScore >= scoresToCompare[i]){
       result.push('Yes');
+    } else {
+      return;
     }
   }
   if ($('#schoolTable tbody tr td:nth-child(7)').html()) {
     $('#schoolTable tbody tr td:nth-child(7)').remove();
   }
   for (i=0;i<result.length;i++) {
-    console.log($('#schoolTable tbody tr:nth-child('+(i+1)+')'));
     $('#schoolTable tbody tr:nth-child('+(i+1)+')').append('<td>'+ result[i] + '</td>');
   }
-  console.log(result);
+  boldTableResult();
 }
+
 $('#psleScore').change(function() {
   calcSuccess();
 });
 
-$('table').stickyTableHeaders();
+function boldTableResult() {
+  $('table tr td:nth-child(7):contains("Yes")').parent().css('font-weight','700');
+  $('table tr td:nth-child(7):contains("No")').parent().css('font-weight','400');
+  $('table tr td:nth-child(7):contains("-")').parent().css('font-weight','400');
+}
