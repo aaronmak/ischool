@@ -39,6 +39,36 @@ function cloneObject(obj) {
     return temp;
 }
 
+function sortTable(table, order) {
+    var asc   = order === 'asc',
+        tbody = table.find('tbody');
+
+    tbody.find('tr').sort(function(a, b) {
+      // console.log($('td:first').html());
+      var val1 = $('td:first', a).html();
+      var val2 = $('td:first', b).html();
+        if (asc) {
+            return val1-val2;
+        } else {
+            return val2-val1;
+        }
+    }).appendTo(tbody);
+}
+
+function sortTableAsc(table) {
+  var tbody = table.find('tbody');
+  var originalOrder = tbody.find('tr').clone(true,true);
+  var ascOrder = [];
+  for (i=0;i<originalOrder.length;i++) {
+    for (j=0;j<originalOrder.length;j++) {
+      if (parseInt($('td:first',originalOrder[j]).html()) === (i+1)) {
+        ascOrder.push(originalOrder[j]);
+      }
+    }
+  }
+  tbody.html($(ascOrder).clone(true,true));
+}
+
 // Map Init
 
 var map = L.map('map', {
@@ -108,22 +138,24 @@ function pop_SecondarySchools(feature, layer) {
 /////popupGraph for each school
 
   var schoolName = toTitleCase(String(feature.properties.School_Name));
-
+  var cutOffPointE = feature.properties['2017 Expected(Express_Lower)'] ? String(feature.properties['2017 Expected(Express_Lower)']) : '-';
+  var cutOffPointA = feature.properties['2017 Expected(Normal(A)_Lower)'] ? String(feature.properties['2017 Expected(Normal(A)_Lower)']) : '-';
+  var cutOffPointT = feature.properties['2017 Expected(Normal(T)_Lower)'] ? String(feature.properties['2017 Expected(Normal(T)_Lower)']) : '-';
   var graph = $('<div class="popupGraph" style="width:100%;height:100%;"><svg/></div>')[0];
 
   var popupContent = L.popup().setContent(graph);
 
-  var graphColumns = [['x', '2013', '2014', '2015']];
+  var graphColumns = [['x', '2014', '2015', '2016']];
 
 
-  if (feature.properties['2013 Sec1(Express_Lower)'] || feature.properties['2014 Sec1(Express_Lower)'] || feature.properties['2015 Sec1(Express_Lower)']) {
-    graphColumns.push(['Express Stream', feature.properties['2013 Sec1(Express_Lower)'], feature.properties['2014 Sec1(Express_Lower)'], feature.properties['2015 Sec1(Express_Lower)']]);
+  if (feature.properties['2016 Sec1(Express_Lower)'] || feature.properties['2014 Sec1(Express_Lower)'] || feature.properties['2015 Sec1(Express_Lower)']) {
+    graphColumns.push(['Express Stream', feature.properties['2014 Sec1(Express_Lower)'], feature.properties['2015 Sec1(Express_Lower)'], feature.properties['2016 Sec1(Express_Lower)']]);
   }
-  if (feature.properties['2013 Sec1(Normal(A)_Lower)'] || feature.properties['2014 Sec1(Normal(A)_Lower)'] || feature.properties['2015 Sec1(Normal(A)_Lower)']) {
-    graphColumns.push(['Normal(A) Stream', feature.properties['2013 Sec1(Normal(A)_Lower)'], feature.properties['2014 Sec1(Normal(A)_Lower)'], feature.properties['2015 Sec1(Normal(A)_Lower)']]);
+  if (feature.properties['2016 Sec1(Normal(A)_Lower)'] || feature.properties['2014 Sec1(Normal(A)_Lower)'] || feature.properties['2015 Sec1(Normal(A)_Lower)']) {
+    graphColumns.push(['Normal(A) Stream', feature.properties['2014 Sec1(Normal(A)_Lower)'], feature.properties['2015 Sec1(Normal(A)_Lower)'], feature.properties['2016 Sec1(Normal(A)_Lower)']]);
   }
-  if (feature.properties['2013 Sec1(Normal(T)_Lower)'] || feature.properties['2014 Sec1(Normal(T)_Lower)'] || feature.properties['2015 Sec1(Normal(T)_Lower)']) {
-    graphColumns.push(['Normal(T) Stream', feature.properties['2013 Sec1(Normal(T)_Lower)'], feature.properties['2014 Sec1(Normal(T)_Lower)'], feature.properties['2015 Sec1(Normal(T)_Lower)']]);
+  if (feature.properties['2016 Sec1(Normal(T)_Lower)'] || feature.properties['2014 Sec1(Normal(T)_Lower)'] || feature.properties['2015 Sec1(Normal(T)_Lower)']) {
+    graphColumns.push(['Normal(T) Stream', feature.properties['2014 Sec1(Normal(T)_Lower)'], feature.properties['2015 Sec1(Normal(T)_Lower)'], feature.properties['2016 Sec1(Normal(T)_Lower)']]);
   }
 
   var chart = c3.generate({
@@ -168,25 +200,22 @@ function pop_SecondarySchools(feature, layer) {
   ///// School Table
   var tr = document.createElement('tr');
   var td1 = document.createElement('td');
-  // var td2 = document.createElement('td');
+  var td2 = document.createElement('td');
+  var td3 = document.createElement('td');
+  var td4 = document.createElement('td');
   var item = schoolTableBody.append(tr);
   var lastTr = $('#schoolTable tbody tr:last-child');
   // lastTr.append(td1,td2);
-  lastTr.append(td1);
-  td1.innerHTML = toTitleCase(String(feature.properties.School_Name));
-  // td2.innerHTML = toTitleCase(String(feature.properties.address));
+  lastTr.append(td1,td2,td3,td4);
+  td1.innerHTML = schoolName;
+  td2.innerHTML = cutOffPointE;
+  td3.innerHTML = cutOffPointA;
+  td4.innerHTML = cutOffPointT;
+
   lastTr.click(function() {
     map.setView(layer.getLatLng(), 15);
     layer.openPopup();
   });
-  // $(document).delegate(lastTr, 'click', function() {
-  //   map.setView(layer.getLatLng(), 15);
-  //   layer.openPopup();
-  // });
-  // $(lastTr).live('click',(function() {
-  //   map.setView(layer.getLatLng(), 15);
-  //   layer.openPopup();
-  // }));
 }
 
 function schoolMarker(feature) {
@@ -296,6 +325,8 @@ function getCoord(postalcode) {
   });
 }
 
+var originalTable = $('#schoolTable').clone(true,true);
+
 function calcWeight() {
   var sliderInput = [];
   var weightMatrix = [];
@@ -360,15 +391,23 @@ function calcWeight() {
 
 function calcDist() {
   var homeLoc = homePoint.features[0];
-  var distSchoolsFromHome = {};
+  var distSchoolsFromHome = [];
   var units = "kilometers";
   for (i=0;i<schoolPoints.length;i++) {
     var distSchoolFromHome = turf.distance(homeLoc,schoolPoints[i],units);
-    distSchoolsFromHome[i] = 1/distSchoolFromHome;
+    distSchoolsFromHome[i] = distSchoolFromHome;
     //Using 1/distSchoolFromHome instead raw distSchoolFromHome
   }
   return (distSchoolsFromHome);
-} // returns an object with key 0-169 and values of distance from home each time this function is called
+} // returns an array with key 0-169 and values of distance from home each time this function is called
+
+function inverseArr(array) {
+  var invArr = [];
+  for (i=0;i<array.length;i++) {
+    invArr.push(1/array[i]);
+  }
+  return invArr;
+}
 
 function getValues() {
   var AcademicList = {};
@@ -445,8 +484,9 @@ $('#buttonAHP').click(function() {
 
   var RankingMatrix = [];
   var schoolRank = [];
-  //Get distance
-  distList = calcDist(add_hmarker);
+  //Get inverse distance
+  var oriDist = calcDist(add_hmarker);
+  var distList = inverseArr(oriDist);
   //Get values
   valueList = getValues();
   AcademicList = valueList[0];
@@ -474,11 +514,41 @@ $('#buttonAHP').click(function() {
   for (i=0;i<schoolScore.length;i++) {
     for (j=0;j<schoolScoreDesc.length;j++) {
       if (schoolScore[i] === schoolScoreDesc[j]) {
-        schoolRank.push(j+1);
+        schoolRank.push(j+1); // since rank starts from 1, not 0
       }
     }
   }
+  $('#schoolTable').html(originalTable.clone(true,true)); // reset table
   for (i=0;i<schoolRank.length;i++) {
     $('#schoolTable tbody tr:nth-child('+(i+1)+')').prepend('<td>'+schoolRank[i]+'</td>');
+    $('#schoolTable tbody tr:nth-child('+(i+1)+')').append('<td>'+ Math.round(oriDist[i]*1000) + '</td>');
+  }
+  sortTableAsc($('#schoolTable'));
+  for (i=0;i<9;i++){
+    console.log($._data($('#schoolTable tbody tr:nth-child('+(i+1)+')')[0],'events'));
+  }
+  $('.sidebar-tabs ul li').removeClass('active');
+  $('.sidebar-content div').removeClass('active');
+  $('.sidebar-tabs ul li:first-child').removeClass('disabled');
+  $('.sidebar-tabs ul li:first-child').addClass('active');
+  $('.sidebar-content div:first-child').addClass('active');
+  $('#schoolTable tr td:nth-child(3)').show();
+});
+
+// Stream Input
+$('#schoolTable tr td:nth-child(3)').show();
+$('#streamInput').change(function() {
+  if ($('#streamInput').val() === 'express') {
+    $('#schoolTable tr td:nth-child(3)').show();
+    $('#schoolTable tr td:nth-child(4)').hide();
+    $('#schoolTable tr td:nth-child(5)').hide();
+  } else if ($('#streamInput').val() === 'normalAcad') {
+    $('#schoolTable tr td:nth-child(4)').show();
+    $('#schoolTable tr td:nth-child(3)').hide();
+    $('#schoolTable tr td:nth-child(5)').hide();
+  } else {
+    $('#schoolTable tr td:nth-child(5)').show();
+    $('#schoolTable tr td:nth-child(3)').hide();
+    $('#schoolTable tr td:nth-child(4)').hide();
   }
 });
