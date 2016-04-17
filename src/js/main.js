@@ -116,7 +116,7 @@ function drawGraph(feature){
 info.update = function (feature) {
     var starList = ['&#9734','&#9734','&#9733'];
     this._div.innerHTML = '<h4>School Information</h4>'+  (feature ?
-        '<b>' + toTitleCase(feature.properties.School_Name) + '</b><br />' + 'School Gender : '+ feature.properties.Gender +'<br />' +'Art Programs : '+ starList[feature.properties.ArtProg] + '<br />' +'Sports Programs : '+ starList[feature.properties.SportsPro]
+        '<b>' + toTitleCase(feature.properties.School_Name) + '</b><br />'+ 'School Gender : '+ feature.properties.Gender +'<br />' +'Art Programs : '+ starList[feature.properties.ArtProg] + '<br />' +'Sports Programs : '+ starList[feature.properties.SportsPro]
         : 'Hover a school');
 /*
     var svg = d3.select(".info.leaflet-control").append("svg")
@@ -175,7 +175,6 @@ function pop_SecondarySchools(feature, layer) {
 
   ///Update the marker
   ///Update info control
-
   var schoolName = toTitleCase(String(feature.properties.School_Name));
   var cutOffPointE = feature.properties['2017 Expected(Express_Lower)'] ? String(feature.properties['2017 Expected(Express_Lower)']) : '-';
   var cutOffPointA = feature.properties['2017 Expected(Normal(A)_Lower)'] ? String(feature.properties['2017 Expected(Normal(A)_Lower)']) : '-';
@@ -293,11 +292,14 @@ function schoolMarker(feature) {
   return marker;
 }
 
-var highlightmarker = L.MakiMarkers.icon({
-  icon: "college",
-  color: "#de2d26",
-  size: "m"
-});
+function highlightmarker(feature){
+  var highlight = L.MakiMarkers.icon({
+    icon: "college",
+    color: "#de2d26",
+    size: "l"
+  });
+  return highlight;
+}
 
 function highlightFeature(e){
   var layer = e.target;
@@ -307,7 +309,6 @@ function highlightFeature(e){
     color: "#de2d26",
     size: "l"
   });*/
-
   info.update(layer.feature);
 }
 
