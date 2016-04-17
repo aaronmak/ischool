@@ -123,4 +123,7 @@ h1.sidebar-header {
 .sidebar-tabs ul li:first-child {
   display: none; }
 
+.leaflet-routing-container-hide, .leaflet-routing-container {
+  display: none; }
+
 /*# sourceMappingURL=main.css.map */

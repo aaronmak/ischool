@@ -166,7 +166,6 @@ function pop_SecondarySchools(feature, layer) {
   ///Update the marker
   ///Update info control
 //  info.update(layer.feature.properties);
-
   var schoolName = toTitleCase(String(feature.properties.School_Name));
   var cutOffPointE = feature.properties['2017 Expected(Express_Lower)'] ? String(feature.properties['2017 Expected(Express_Lower)']) : '-';
   var cutOffPointA = feature.properties['2017 Expected(Normal(A)_Lower)'] ? String(feature.properties['2017 Expected(Normal(A)_Lower)']) : '-';
@@ -271,6 +270,7 @@ function pop_SecondarySchools(feature, layer) {
   lastTr.click(function() {
     map.setView(layer.getLatLng(), 15);
     layer.openPopup();
+    route(layer);
   });
 }
 
@@ -284,13 +284,34 @@ function schoolMarker(feature) {
 }
 
 function onEachFeature(feature,layer){
-  layer.on({
-    click: pop_SecondarySchools(feature,layer)
+  pop_SecondarySchools(feature,layer);
+  layer.on('click', function(e) {
+    route(layer);
   });
+}
+var routing;
+function route(layer) {
+  if (routing) {
+    routing.spliceWaypoints(1,1, layer.getLatLng());
+  } else if (homePoint.features[0].geometry.coordinates[1]) {
+    routing = L.Routing.control({
+      position: 'topleft',
+      createMarker: function() { return null; },
+      waypoints: [
+        L.latLng(homePoint.features[0].geometry.coordinates[1],homePoint.features[0].geometry.coordinates[0]),
+        layer.getLatLng()
+      ],
+      draggableWaypoints: false,
+      addWaypoints: false,
+      lineOptions: {
+        styles: [{color: 'black', opacity: 1, weight: 8}, {color: 'white', opacity: 0.8, weight: 0}, {color: '#1FB5FB', opacity: 1, weight: 7}]
+      }
+    }).addTo(map);
+  }
 }
 
 var json_SecondarySchools = new L.geoJson(secondarySchools, {
-  onEachFeature:onEachFeature,
+  onEachFeature: onEachFeature,
   pointToLayer: function(feature, latlng) {
     // console.log(latlng);
     //schoolsLoc.push(latlng);
