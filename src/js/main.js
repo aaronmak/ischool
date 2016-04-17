@@ -96,7 +96,10 @@ var sidebar = L.control.sidebar('sidebar-control', {
 
 map.addControl(sidebar);
 
+
+
 //////Control for school point
+
 var info = L.control({position: 'bottomleft'});
 
 info.onAdd = function (map) {
@@ -104,11 +107,24 @@ info.onAdd = function (map) {
     this.update();
     return this._div;
 };
+
+//function drawGraph
+function drawGraph(feature){
+  var graphColumns = [['x', '2014', '2015', '2016', '2017']];
+}
 // method that we will use to update the control based on feature properties passed
-info.update = function (props) {
-    this._div.innerHTML = '<h4>School Information</h4>'+  (props ?
-        '<b>' + props.School_Name + '</b><br />' + props.Gender + ' people / mi<sup>2</sup>'
-        : 'Click a school');
+info.update = function (feature) {
+    var starList = ['&#9734','&#9734','&#9733'];
+    this._div.innerHTML = '<h4>School Information</h4>'+  (feature ?
+        '<b>' + toTitleCase(feature.properties.School_Name) + '</b><br />' + 'School Gender : '+ feature.properties.Gender +'<br />' +'Art Programs : '+ starList[feature.properties.ArtProg] + '<br />' +'Sports Programs : '+ starList[feature.properties.SportsPro]
+        : 'Hover a school');
+/*
+    var svg = d3.select(".info.leaflet-control").append("svg")
+        .attr("id", 'info')
+        .attr("width", 450)
+        .attr("height", 200);*/
+    //Graph for AE
+    drawGraph(feature);
 };
 info.addTo(map);
 
@@ -154,18 +170,11 @@ noUiSlider.create(slider10, defaultOptions);
 var schoolTableBody = $('#schoolTable tbody');
 var schoolPoints = [];
 
-var highlightmarker = L.MakiMarkers.icon({
-  icon: "college",
-  color: "#de2d26",
-  size: "m"
-});
-
 function pop_SecondarySchools(feature, layer) {
 /////popupGraph for each school
 
   ///Update the marker
   ///Update info control
-//  info.update(layer.feature.properties);
 
   var schoolName = toTitleCase(String(feature.properties.School_Name));
   var cutOffPointE = feature.properties['2017 Expected(Express_Lower)'] ? String(feature.properties['2017 Expected(Express_Lower)']) : '-';
@@ -177,6 +186,7 @@ function pop_SecondarySchools(feature, layer) {
 
   var graphColumns = [['x', '2014', '2015', '2016', '2017']];
 
+  //console.log(feature.properties.School_Name)
 
   if (feature.properties['2016 Sec1(Express_Lower)'] || feature.properties['2014 Sec1(Express_Lower)'] || feature.properties['2015 Sec1(Express_Lower)']) {
     var expressCol = ['Express Stream'];
@@ -283,8 +293,33 @@ function schoolMarker(feature) {
   return marker;
 }
 
+var highlightmarker = L.MakiMarkers.icon({
+  icon: "college",
+  color: "#de2d26",
+  size: "m"
+});
+
+function highlightFeature(e){
+  var layer = e.target;
+/*
+  icon.setStyle({
+    icon: "college",
+    color: "#de2d26",
+    size: "l"
+  });*/
+
+  info.update(layer.feature);
+}
+
+function resetHighlight(e){
+  var layer = e.target;
+  info.update();
+
+}
 function onEachFeature(feature,layer){
   layer.on({
+    mouseover:highlightFeature,
+    mouseout:resetHighlight,
     click: pop_SecondarySchools(feature,layer)
   });
 }
