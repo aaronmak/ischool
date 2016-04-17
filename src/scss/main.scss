@@ -168,6 +168,7 @@ h1.sidebar-header {
 .sidebar-tabs ul li:first-child {
   display: none;
 }
+<<<<<<< HEAD
 .info {
     padding: 6px 8px;
     font: 14px/16px Arial, Helvetica, sans-serif;
@@ -179,4 +180,9 @@ h1.sidebar-header {
 .info h4 {
     margin: 0 0 5px;
     color: #777;
+=======
+
+.leaflet-routing-container-hide, .leaflet-routing-container  {
+  display: none;
+>>>>>>> d87e8c350fc1286472719ba6fb40b330b26f83fe
 }

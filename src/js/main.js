@@ -185,8 +185,6 @@ function pop_SecondarySchools(feature, layer) {
 
   var graphColumns = [['x', '2014', '2015', '2016', '2017']];
 
-  //console.log(feature.properties.School_Name)
-
   if (feature.properties['2016 Sec1(Express_Lower)'] || feature.properties['2014 Sec1(Express_Lower)'] || feature.properties['2015 Sec1(Express_Lower)']) {
     var expressCol = ['Express Stream'];
     if (feature.properties['2014 Sec1(Express_Lower)']) {expressCol.push(feature.properties['2014 Sec1(Express_Lower)']);}
@@ -280,6 +278,7 @@ function pop_SecondarySchools(feature, layer) {
   lastTr.click(function() {
     map.setView(layer.getLatLng(), 15);
     layer.openPopup();
+    route(layer);
   });
 }
 
@@ -318,15 +317,38 @@ function resetHighlight(e){
 
 }
 function onEachFeature(feature,layer){
+  pop_SecondarySchools(feature,layer);
   layer.on({
     mouseover:highlightFeature,
-    mouseout:resetHighlight,
-    click: pop_SecondarySchools(feature,layer)
+    mouseout:resetHighlight
   });
+  layer.on('click', function(e) {
+    route(layer);
+  });
+}
+var routing;
+function route(layer) {
+  if (routing) {
+    routing.spliceWaypoints(1,1, layer.getLatLng());
+  } else if (homePoint.features[0].geometry.coordinates[1]) {
+    routing = L.Routing.control({
+      position: 'topleft',
+      createMarker: function() { return null; },
+      waypoints: [
+        L.latLng(homePoint.features[0].geometry.coordinates[1],homePoint.features[0].geometry.coordinates[0]),
+        layer.getLatLng()
+      ],
+      draggableWaypoints: false,
+      addWaypoints: false,
+      lineOptions: {
+        styles: [{color: 'black', opacity: 1, weight: 8}, {color: 'white', opacity: 0.8, weight: 0}, {color: '#1FB5FB', opacity: 1, weight: 7}]
+      }
+    }).addTo(map);
+  }
 }
 
 var json_SecondarySchools = new L.geoJson(secondarySchools, {
-  onEachFeature:onEachFeature,
+  onEachFeature: onEachFeature,
   pointToLayer: function(feature, latlng) {
     // console.log(latlng);
     //schoolsLoc.push(latlng);
