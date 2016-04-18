@@ -115,7 +115,7 @@ info.update = function (feature) {
     var starList = ['Achievement Award','Achievement Award','Sustanined Achievement Award'];
     this._div.innerHTML = '<h4>School Information</h4>'+  (feature ?
         '<b>' + toTitleCase(feature.properties.School_Name) + '</b><br />'+ 'School Gender : '+ feature.properties.Gender +'<br />' +'Art Programs : '+ starList[feature.properties.ArtProg] + '<br />' +'Sports Programs : '+ starList[feature.properties.SportsPro]+'<br />'+ 'Distinctive programs : ' + feature.properties.school_with_distinctive_programmes +'<br />'+'Proximity Distance to home:'
-        : 'Hover a school');
+        : 'Place your cursor over a school');
 /*
     var svg = d3.select(".info.leaflet-control").append("svg")
         .attr("id", 'info')
@@ -708,3 +708,6 @@ function boldTableResult() {
   $('table tr td:nth-child(7):contains("No")').parent().css('font-weight','400');
   $('table tr td:nth-child(7):contains("-")').parent().css('font-weight','400');
 }
+
+///// Intro JS
+introJs.start();
