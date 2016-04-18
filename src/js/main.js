@@ -113,10 +113,11 @@ function drawGraph(feature){
   var graphColumns = [['x', '2014', '2015', '2016', '2017']];
 }
 // method that we will use to update the control based on feature properties passed
+
 info.update = function (feature) {
     var starList = ['Achievement award','Achievement award','Sustanined achievement award'];
     this._div.innerHTML = '<h4>School Information</h4>'+  (feature ?
-        '<b>' + toTitleCase(feature.properties.School_Name) + '</b><br />'+ 'School Gender : '+ feature.properties.Gender +'<br />' +'Art Programs : '+ starList[feature.properties.ArtProg] + '<br />' +'Sports Programs : '+ starList[feature.properties.SportsPro]+'<br />'+ 'Distinctive programs : ' + feature.properties.school_with_distinctive_programmes +'<br />'+'Proximity Distance to home:'
+        '<b>' + toTitleCase(feature.properties.School_Name) + '</b><br />'+ 'School Gender : '+ feature.properties.Gender +'<br />' +'Art Programs : '+ starList[feature.properties.ArtProg] + '<br />' +'Sports Programs : '+ starList[feature.properties.SportsPro]+'<br />'+ 'Distinctive programs : ' + feature.properties.school_with_distinctive_programmes +'<br />'+'Proximity distance to home: '+ totalDistance +' km' + '<br />' + 'Proximity time to home: '+ totalTime + ' min'
         : 'Hover a school');
 /*
     var svg = d3.select(".info.leaflet-control").append("svg")
@@ -126,6 +127,7 @@ info.update = function (feature) {
     //Graph for AE
     drawGraph(feature);
 };
+
 info.addTo(map);
 
 ////// Sliders
@@ -327,6 +329,8 @@ function onEachFeature(feature,layer){
   });
 }
 var routing;
+var totalTime = 0;
+var totalDistance = 0;
 function route(layer) {
   if (routing) {
     routing.spliceWaypoints(1,1, layer.getLatLng());
@@ -345,15 +349,13 @@ function route(layer) {
       }
     }).addTo(map);
   }
-  //console.log(routing._routes[0].summary.totalDistance);
-  //console.log('Distance: ' + _routes[0].summary.totalDistance);
-  /*
-  routing.route(coordinates, (err, routes) => {
-        //console.log(routes);
-        if(routes !== undefined){
-           console.log(routes[0].summary.totalDistance);
-        }
-    });*/
+  routing.on('routesfound', function(e) {
+    var routes = e.routes;
+    //console.log(routes[0].summary.totalTime / 60 + ' minute(s).');
+    //console.log(routes[0].summary.totalDistance);
+    totalTime = (routes[0].summary.totalTime / 60).toFixed(1);
+    totalDistance = (routes[0].summary.totalDistance/1000).toFixed(1);
+});
 }
 
 var json_SecondarySchools = new L.geoJson(secondarySchools, {
