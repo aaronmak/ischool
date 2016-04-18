@@ -44,7 +44,6 @@ function sortTable(table, order) {
         tbody = table.find('tbody');
 
     tbody.find('tr').sort(function(a, b) {
-      // console.log($('td:first').html());
       var val1 = $('td:first', a).html();
       var val2 = $('td:first', b).html();
         if (asc) {
@@ -74,7 +73,6 @@ function sortTableAsc(table) {
 var map = L.map('map', {
     zoomControl:false, maxZoom:17, minZoom:11
 }).fitBounds([[1.470774832084756, 104.08848306516336],[1.158698700635265,103.60543572198932]]);
-// var hash = new L.Hash(map);
 var feature_group = new L.featureGroup([]);
 var bounds_group = new L.featureGroup([]);
 var basemap = L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -114,7 +112,7 @@ function drawGraph(feature){
 }
 // method that we will use to update the control based on feature properties passed
 info.update = function (feature) {
-    var starList = ['Achievement award','Achievement award','Sustanined achievement award'];
+    var starList = ['Achievement Award','Achievement Award','Sustanined Achievement Award'];
     this._div.innerHTML = '<h4>School Information</h4>'+  (feature ?
         '<b>' + toTitleCase(feature.properties.School_Name) + '</b><br />'+ 'School Gender : '+ feature.properties.Gender +'<br />' +'Art Programs : '+ starList[feature.properties.ArtProg] + '<br />' +'Sports Programs : '+ starList[feature.properties.SportsPro]+'<br />'+ 'Distinctive programs : ' + feature.properties.school_with_distinctive_programmes +'<br />'+'Proximity Distance to home:'
         : 'Hover a school');
@@ -345,15 +343,6 @@ function route(layer) {
       }
     }).addTo(map);
   }
-  //console.log(routing._routes[0].summary.totalDistance);
-  //console.log('Distance: ' + _routes[0].summary.totalDistance);
-  /*
-  routing.route(coordinates, (err, routes) => {
-        //console.log(routes);
-        if(routes !== undefined){
-           console.log(routes[0].summary.totalDistance);
-        }
-    });*/
 }
 
 var json_SecondarySchools = new L.geoJson(secondarySchools, {
@@ -408,9 +397,7 @@ function getCoord(postalcode) {
   $.getJSON(getTokenURL)
   .done(function(data){
     token = data.GetToken[0].NewToken;
-    // console.log('token: ' + token);
     var url = 'http://www.onemap.sg/APIV2/services.svc/basicSearchV2?token='+token+'&searchVal='+postalcode+'&otptFlds=SEARCHVAL,CATEGORY&returnGeom=0&rset=1&projSys=WGS84';
-    // console.log(url);
     $.getJSON(url)
     .done(function(data) {
       if (data.SearchResults.length === 2) {
@@ -430,7 +417,6 @@ function getCoord(postalcode) {
       else {
           $('#postalCodeResult').html('Postal Code Not Found');
       }
-      // console.log(add_hmarker);
     })
     .fail(function(err){
       $('#postalCodeResult').html('<span>Postal Code Error</span>');
