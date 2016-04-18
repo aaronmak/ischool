@@ -114,9 +114,9 @@ function drawGraph(feature){
 }
 // method that we will use to update the control based on feature properties passed
 info.update = function (feature) {
-    var starList = ['&#9734','&#9734','&#9733'];
+    var starList = ['Achievement award','Achievement award','Sustanined achievement award'];
     this._div.innerHTML = '<h4>School Information</h4>'+  (feature ?
-        '<b>' + toTitleCase(feature.properties.School_Name) + '</b><br />'+ 'School Gender : '+ feature.properties.Gender +'<br />' +'Art Programs : '+ starList[feature.properties.ArtProg] + '<br />' +'Sports Programs : '+ starList[feature.properties.SportsPro]
+        '<b>' + toTitleCase(feature.properties.School_Name) + '</b><br />'+ 'School Gender : '+ feature.properties.Gender +'<br />' +'Art Programs : '+ starList[feature.properties.ArtProg] + '<br />' +'Sports Programs : '+ starList[feature.properties.SportsPro]+'<br />'+ 'Distinctive programs : ' + feature.properties.school_with_distinctive_programmes +'<br />'+'Proximity Distance to home:'
         : 'Hover a school');
 /*
     var svg = d3.select(".info.leaflet-control").append("svg")
@@ -345,6 +345,14 @@ function route(layer) {
       }
     }).addTo(map);
   }
+  //console.log(routing._routes[0].summary.totalDistance);
+  //console.log('Distance: ' + _routes[0].summary.totalDistance);
+  routing.route(coordinates, (err, routes) => {
+        //console.log(routes);
+        if(routes !== undefined){
+           console.log(routes[0].summary.totalDistance);
+        }
+    });
 }
 
 var json_SecondarySchools = new L.geoJson(secondarySchools, {
