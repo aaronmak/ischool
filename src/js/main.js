@@ -111,6 +111,7 @@ function drawGraph(feature){
   var graphColumns = [['x', '2014', '2015', '2016', '2017']];
 }
 // method that we will use to update the control based on feature properties passed
+
 info.update = function (feature) {
     var starList = ['Achievement Award','Achievement Award','Sustanined Achievement Award'];
     this._div.innerHTML = '<h4>School Information</h4>'+  (feature ?
@@ -124,6 +125,7 @@ info.update = function (feature) {
     //Graph for AE
     drawGraph(feature);
 };
+
 info.addTo(map);
 
 ////// Sliders
@@ -325,6 +327,8 @@ function onEachFeature(feature,layer){
   });
 }
 var routing;
+var totalTime = 0;
+var totalDistance = 0;
 function route(layer) {
   if (routing) {
     routing.spliceWaypoints(1,1, layer.getLatLng());
@@ -343,6 +347,13 @@ function route(layer) {
       }
     }).addTo(map);
   }
+  routing.on('routesfound', function(e) {
+    var routes = e.routes;
+    //console.log(routes[0].summary.totalTime / 60 + ' minute(s).');
+    //console.log(routes[0].summary.totalDistance);
+    totalTime = (routes[0].summary.totalTime / 60).toFixed(1);
+    totalDistance = (routes[0].summary.totalDistance/1000).toFixed(1);
+  });
 }
 
 var json_SecondarySchools = new L.geoJson(secondarySchools, {
