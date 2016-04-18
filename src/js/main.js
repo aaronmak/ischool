@@ -347,12 +347,13 @@ function route(layer) {
   }
   //console.log(routing._routes[0].summary.totalDistance);
   //console.log('Distance: ' + _routes[0].summary.totalDistance);
+  /*
   routing.route(coordinates, (err, routes) => {
         //console.log(routes);
         if(routes !== undefined){
            console.log(routes[0].summary.totalDistance);
         }
-    });
+    });*/
 }
 
 var json_SecondarySchools = new L.geoJson(secondarySchools, {

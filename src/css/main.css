@@ -1,45 +1,143 @@
-/*
-Error: Invalid CSS after "...b40b330b26f83fe": expected "{", was "}"
-        on line 190 of src/scss/main.scss
+body {
+  padding: 0;
+  margin: 0; }
 
-185: =======
-186: 
-187: .leaflet-routing-container-hide, .leaflet-routing-container  {
-188:   display: none;
-189: >>>>>>> d87e8c350fc1286472719ba6fb40b330b26f83fe
-190: }
+html, body, #map {
+  height: 100%; }
 
-Backtrace:
-src/scss/main.scss:190
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:1189:in `expected'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:1125:in `expected'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:1120:in `tok!'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:656:in `block'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:726:in `declaration_or_ruleset'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:676:in `block_child'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:668:in `block_contents'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:657:in `block'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:726:in `declaration_or_ruleset'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:676:in `block_child'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:668:in `block_contents'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:657:in `block'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:649:in `ruleset'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:675:in `block_child'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:668:in `block_contents'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:125:in `stylesheet'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/scss/parser.rb:41:in `parse'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/engine.rb:406:in `_to_tree'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/engine.rb:381:in `_render_with_sourcemap'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/engine.rb:298:in `render_with_sourcemap'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/exec/sass_scss.rb:391:in `run'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/exec/sass_scss.rb:63:in `process_result'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/exec/base.rb:52:in `parse'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/lib/sass/exec/base.rb:19:in `parse!'
-/Library/Ruby/Gems/2.0.0/gems/sass-3.4.22/bin/sass:13:in `<top (required)>'
-/usr/local/bin/sass:23:in `load'
-/usr/local/bin/sass:23:in `<main>'
-*/
-body:before {
-  white-space: pre;
-  font-family: monospace;
-  content: "Error: Invalid CSS after \"...b40b330b26f83fe\": expected \"{\", was \"}\"\A         on line 190 of src/scss/main.scss\A \A 185: =======\A 186: \A 187: .leaflet-routing-container-hide, .leaflet-routing-container  {\A 188:   display: none;\A 189: >>>>>>> d87e8c350fc1286472719ba6fb40b330b26f83fe\A 190: }"; }
+.map-container, .row {
+  height: 100%; }
+
+#map {
+  width: 100%; }
+
+.tooltip {
+  position: absolute;
+  z-index: 1020;
+  display: block;
+  padding: 5px;
+  font-size: 11px;
+  visibility: visible;
+  margin-top: -2px;
+  bottom: 120%;
+  margin-left: -2em; }
+  .tooltip .tooltip-arrow {
+    bottom: 0;
+    left: 50%;
+    margin-left: -5px;
+    border-top: 5px solid #000000;
+    border-right: 5px solid transparent;
+    border-left: 5px solid transparent;
+    position: absolute;
+    width: 0;
+    height: 0; }
+
+.tooltip-inner {
+  max-width: 200px;
+  padding: 3px 8px;
+  color: #ffffff;
+  text-align: center;
+  text-decoration: none;
+  background-color: #000000;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px; }
+
+.slider-label {
+  font-size: 1.3rem;
+  line-height: 1.2;
+  float: left; }
+
+.slider-label--right {
+  text-align: right;
+  float: right; }
+
+.slider-label-container {
+  margin-top: 60px; }
+
+.slider-ahp {
+  margin-top: 10px; }
+
+#sidebar-control {
+  border: none; }
+  #sidebar-control ul {
+    list-style: none; }
+
+@media (min-width: 768px) {
+  .sidebar {
+    top: 6px;
+    bottom: 6px;
+    transition: width 500ms; } }
+@media (min-width: 768px) and (max-width: 991px) {
+  .sidebar {
+    width: 60%; } }
+@media (min-width: 992px) and (max-width: 1199px) {
+  .sidebar {
+    width: 50%; } }
+@media (min-width: 1200px) {
+  .sidebar {
+    width: 45%; } }
+.noUi-handle {
+  cursor: pointer; }
+
+#ahp .button {
+  margin-top: 70px;
+  margin-bottom: 20px; }
+
+h1.sidebar-header {
+  margin-bottom: 20px;
+  font-weight: 700; }
+
+#schoolTable {
+  margin-bottom: 2rem;
+  margin-left: -10px;
+  margin-right: -10px; }
+  #schoolTable tr:hover {
+    background: #f4f4f4;
+    cursor: pointer; }
+  #schoolTable tr td:nth-child(3), #schoolTable tr td:nth-child(4), #schoolTable tr td:nth-child(5) {
+    display: none; }
+  #schoolTable th {
+    background: #0074d9;
+    color: #fff; }
+  #schoolTable th:first-child, #schoolTable td:first-child {
+    padding-left: 12px; }
+  #schoolTable th:last-child, #schoolTable td:last-child {
+    padding-right: 12px; }
+
+.button.button-primary, button.button-primary, input[type=button].button-primary, input[type=reset].button-primary, input[type=submit].button-primary {
+  background-color: #0074d9;
+  border-color: #0074d9; }
+  .button.button-primary:hover, button.button-primary:hover, input[type=button].button-primary:hover, input[type=reset].button-primary:hover, input[type=submit].button-primary:hover {
+    background-color: #0059a6;
+    border-color: #0059a6; }
+
+.slider-pane > .slider-label-container:first-child {
+  margin-top: 10px; }
+
+.slider-instruction {
+  font-weight: 700;
+  margin-top: 10px;
+  margin-bottom: -50px; }
+
+.sidebar-tabs ul li:first-child {
+  display: none; }
+
+.info {
+  padding: 6px 8px;
+  font: 14px/16px Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  background: white;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  line-height: 20px; }
+
+.info h4 {
+  margin: 0 0 5px;
+  color: #777; }
+
+.leaflet-routing-container-hide, .leaflet-routing-container {
+  display: none; }
+
+/*# sourceMappingURL=main.css.map */
