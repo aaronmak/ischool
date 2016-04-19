@@ -9950,323 +9950,6 @@ return jQuery;
   };
 })();
 
-/*! Copyright (c) 2011 by Jonas Mosbech - https://github.com/jmosbech/StickyTableHeaders
-	MIT license info: https://github.com/jmosbech/StickyTableHeaders/blob/master/license.txt */
-
-;(function ($, window, undefined) {
-	'use strict';
-
-	var name = 'stickyTableHeaders',
-		id = 0,
-		defaults = {
-			fixedOffset: 0,
-			leftOffset: 0,
-			marginTop: 0,
-			objDocument: document,
-			objHead: 'head',
-			objWindow: window,
-			scrollableArea: window,
-			cacheHeaderHeight: false
-		};
-
-	function Plugin (el, options) {
-		// To avoid scope issues, use 'base' instead of 'this'
-		// to reference this class from internal events and functions.
-		var base = this;
-
-		// Access to jQuery and DOM versions of element
-		base.$el = $(el);
-		base.el = el;
-		base.id = id++;
-
-		// Listen for destroyed, call teardown
-		base.$el.bind('destroyed',
-			$.proxy(base.teardown, base));
-
-		// Cache DOM refs for performance reasons
-		base.$clonedHeader = null;
-		base.$originalHeader = null;
-
-		// Cache header height for performance reasons
-		base.cachedHeaderHeight = null;
-
-		// Keep track of state
-		base.isSticky = false;
-		base.hasBeenSticky = false;
-		base.leftOffset = null;
-		base.topOffset = null;
-
-		base.init = function () {
-			base.setOptions(options);
-
-			base.$el.each(function () {
-				var $this = $(this);
-
-				// remove padding on <table> to fix issue #7
-				$this.css('padding', 0);
-
-				base.$originalHeader = $('thead:first', this);
-				base.$clonedHeader = base.$originalHeader.clone();
-				$this.trigger('clonedHeader.' + name, [base.$clonedHeader]);
-
-				base.$clonedHeader.addClass('tableFloatingHeader');
-				base.$clonedHeader.css({display: 'none', opacity: 0.0});
-
-				base.$originalHeader.addClass('tableFloatingHeaderOriginal');
-
-				base.$originalHeader.after(base.$clonedHeader);
-
-				base.$printStyle = $('<style type="text/css" media="print">' +
-					'.tableFloatingHeader{display:none !important;}' +
-					'.tableFloatingHeaderOriginal{position:static !important;}' +
-					'</style>');
-				base.$head.append(base.$printStyle);
-			});
-
-			base.updateWidth();
-			base.toggleHeaders();
-			base.bind();
-		};
-
-		base.destroy = function (){
-			base.$el.unbind('destroyed', base.teardown);
-			base.teardown();
-		};
-
-		base.teardown = function(){
-			if (base.isSticky) {
-				base.$originalHeader.css('position', 'static');
-			}
-			$.removeData(base.el, 'plugin_' + name);
-			base.unbind();
-
-			base.$clonedHeader.remove();
-			base.$originalHeader.removeClass('tableFloatingHeaderOriginal');
-			base.$originalHeader.css('visibility', 'visible');
-			base.$printStyle.remove();
-
-			base.el = null;
-			base.$el = null;
-		};
-
-		base.bind = function(){
-			base.$scrollableArea.on('scroll.' + name, base.toggleHeaders);
-			if (!base.isWindowScrolling) {
-				base.$window.on('scroll.' + name + base.id, base.setPositionValues);
-				base.$window.on('resize.' + name + base.id, base.toggleHeaders);
-			}
-			base.$scrollableArea.on('resize.' + name, base.toggleHeaders);
-			base.$scrollableArea.on('resize.' + name, base.updateWidth);
-		};
-
-		base.unbind = function(){
-			// unbind window events by specifying handle so we don't remove too much
-			base.$scrollableArea.off('.' + name, base.toggleHeaders);
-			if (!base.isWindowScrolling) {
-				base.$window.off('.' + name + base.id, base.setPositionValues);
-				base.$window.off('.' + name + base.id, base.toggleHeaders);
-			}
-			base.$scrollableArea.off('.' + name, base.updateWidth);
-		};
-
-		// We debounce the functions bound to the scroll and resize events
-		base.debounce = function (fn, delay) {
-			var timer = null;
-			return function () {
-				var context = this, args = arguments;
-				clearTimeout(timer);
-				timer = setTimeout(function () {
-					fn.apply(context, args);
-				}, delay);
-			};
-		};
-
-		base.toggleHeaders = base.debounce(function () {
-			if (base.$el) {
-				base.$el.each(function () {
-					var $this = $(this),
-						newLeft,
-						newTopOffset = base.isWindowScrolling ? (
-									isNaN(base.options.fixedOffset) ?
-									base.options.fixedOffset.outerHeight() :
-									base.options.fixedOffset
-								) :
-								base.$scrollableArea.offset().top + (!isNaN(base.options.fixedOffset) ? base.options.fixedOffset : 0),
-						offset = $this.offset(),
-
-						scrollTop = base.$scrollableArea.scrollTop() + newTopOffset,
-						scrollLeft = base.$scrollableArea.scrollLeft(),
-
-						headerHeight = base.options.cacheHeaderHeight ? base.cachedHeaderHeight : base.$clonedHeader.height(),
-
-						scrolledPastTop = base.isWindowScrolling ?
-								scrollTop > offset.top :
-								newTopOffset > offset.top,
-						notScrolledPastBottom = (base.isWindowScrolling ? scrollTop : 0) <
-							(offset.top + $this.height() - headerHeight - (base.isWindowScrolling ? 0 : newTopOffset));
-
-					if (scrolledPastTop && notScrolledPastBottom) {
-						newLeft = offset.left - scrollLeft + base.options.leftOffset;
-						base.$originalHeader.css({
-							'position': 'fixed',
-							'margin-top': base.options.marginTop,
-							'left': newLeft,
-							'z-index': 3 // #18: opacity bug
-						});
-						base.leftOffset = newLeft;
-						base.topOffset = newTopOffset;
-						base.$clonedHeader.css('display', '');
-						if (!base.isSticky) {
-							base.isSticky = true;
-							// make sure the width is correct: the user might have resized the browser while in static mode
-							base.updateWidth();
-							$this.trigger('enabledStickiness.' + name);
-						}
-						base.setPositionValues();
-					} else if (base.isSticky) {
-						base.$originalHeader.css('position', 'static');
-						base.$clonedHeader.css('display', 'none');
-						base.isSticky = false;
-						base.resetWidth($('td,th', base.$clonedHeader), $('td,th', base.$originalHeader));
-						$this.trigger('disabledStickiness.' + name);
-					}
-				});
-			}
-		}, 0);
-
-		base.setPositionValues = base.debounce(function () {
-			var winScrollTop = base.$window.scrollTop(),
-				winScrollLeft = base.$window.scrollLeft();
-			if (!base.isSticky ||
-					winScrollTop < 0 || winScrollTop + base.$window.height() > base.$document.height() ||
-					winScrollLeft < 0 || winScrollLeft + base.$window.width() > base.$document.width()) {
-				return;
-			}
-			base.$originalHeader.css({
-				'top': base.topOffset - (base.isWindowScrolling ? 0 : winScrollTop),
-				'left': base.leftOffset - (base.isWindowScrolling ? 0 : winScrollLeft)
-			});
-		}, 0);
-
-		base.updateWidth = base.debounce(function () {
-			if (!base.isSticky) {
-				return;
-			}
-			// Copy cell widths from clone
-			if (!base.$originalHeaderCells) {
-				base.$originalHeaderCells = $('th,td', base.$originalHeader);
-			}
-			if (!base.$clonedHeaderCells) {
-				base.$clonedHeaderCells = $('th,td', base.$clonedHeader);
-			}
-			var cellWidths = base.getWidth(base.$clonedHeaderCells);
-			base.setWidth(cellWidths, base.$clonedHeaderCells, base.$originalHeaderCells);
-
-			// Copy row width from whole table
-			base.$originalHeader.css('width', base.$clonedHeader.width());
-
-			// If we're caching the height, we need to update the cached value when the width changes
-			if (base.options.cacheHeaderHeight) {
-				base.cachedHeaderHeight = base.$clonedHeader.height();
-			}
-		}, 0);
-
-		base.getWidth = function ($clonedHeaders) {
-			var widths = [];
-			$clonedHeaders.each(function (index) {
-				var width, $this = $(this);
-
-				if ($this.css('box-sizing') === 'border-box') {
-					var boundingClientRect = $this[0].getBoundingClientRect();
-					if(boundingClientRect.width) {
-						width = boundingClientRect.width; // #39: border-box bug
-					} else {
-						width = boundingClientRect.right - boundingClientRect.left; // ie8 bug: getBoundingClientRect() does not have a width property
-					}
-				} else {
-					var $origTh = $('th', base.$originalHeader);
-					if ($origTh.css('border-collapse') === 'collapse') {
-						if (window.getComputedStyle) {
-							width = parseFloat(window.getComputedStyle(this, null).width);
-						} else {
-							// ie8 only
-							var leftPadding = parseFloat($this.css('padding-left'));
-							var rightPadding = parseFloat($this.css('padding-right'));
-							// Needs more investigation - this is assuming constant border around this cell and it's neighbours.
-							var border = parseFloat($this.css('border-width'));
-							width = $this.outerWidth() - leftPadding - rightPadding - border;
-						}
-					} else {
-						width = $this.width();
-					}
-				}
-
-				widths[index] = width;
-			});
-			return widths;
-		};
-
-		base.setWidth = function (widths, $clonedHeaders, $origHeaders) {
-			$clonedHeaders.each(function (index) {
-				var width = widths[index];
-				$origHeaders.eq(index).css({
-					'min-width': width,
-					'max-width': width
-				});
-			});
-		};
-
-		base.resetWidth = function ($clonedHeaders, $origHeaders) {
-			$clonedHeaders.each(function (index) {
-				var $this = $(this);
-				$origHeaders.eq(index).css({
-					'min-width': $this.css('min-width'),
-					'max-width': $this.css('max-width')
-				});
-			});
-		};
-
-		base.setOptions = function (options) {
-			base.options = $.extend({}, defaults, options);
-			base.$window = $(base.options.objWindow);
-			base.$head = $(base.options.objHead);
-			base.$document = $(base.options.objDocument);
-			base.$scrollableArea = $(base.options.scrollableArea);
-			base.isWindowScrolling = base.$scrollableArea[0] === base.$window[0];
-		};
-
-		base.updateOptions = function (options) {
-			base.setOptions(options);
-			// scrollableArea might have changed
-			base.unbind();
-			base.bind();
-			base.updateWidth();
-			base.toggleHeaders();
-		};
-
-		// Run initializer
-		base.init();
-	}
-
-	// A plugin wrapper around the constructor,
-	// preventing against multiple instantiations
-	$.fn[name] = function ( options ) {
-		return this.each(function () {
-			var instance = $.data(this, 'plugin_' + name);
-			if (instance) {
-				if (typeof options === 'string') {
-					instance[options].apply(instance);
-				} else {
-					instance.updateOptions(options);
-				}
-			} else if(options !== 'destroy') {
-				$.data(this, 'plugin_' + name, new Plugin( this, options ));
-			}
-		});
-	};
-
-})(jQuery, window);
-
 !function() {
   var d3 = {
     version: "3.5.16"
@@ -19821,1692 +19504,4736 @@ return jQuery;
   });
   if (typeof define === "function" && define.amd) this.d3 = d3, define(d3); else if (typeof module === "object" && module.exports) module.exports = d3; else this.d3 = d3;
 }();
-/**
- * Intro.js v2.0
- * https://github.com/usablica/intro.js
- * MIT licensed
+/*
+ * jQuery Dynatable plugin 0.3.1
  *
- * Copyright (C) 2013 usabli.ca - A weekend project by Afshin Mehrabani (@afshinmeh)
+ * Copyright (c) 2014 Steve Schwartz (JangoSteve)
+ *
+ * Dual licensed under the AGPL and Proprietary licenses:
+ *   http://www.dynatable.com/license/
+ *
+ * Date: Tue Jan 02 2014
  */
+//
 
-(function (root, factory) {
-  if (typeof exports === 'object') {
-    // CommonJS
-    factory(exports);
-  } else if (typeof define === 'function' && define.amd) {
-    // AMD. Register as an anonymous module.
-    define(['exports'], factory);
-  } else {
-    // Browser globals
-    factory(root);
-  }
-} (this, function (exports) {
-  //Default config/variables
-  var VERSION = '2.0';
+(function($) {
+  var defaults,
+      mergeSettings,
+      dt,
+      Model,
+      modelPrototypes = {
+        dom: Dom,
+        domColumns: DomColumns,
+        records: Records,
+        recordsCount: RecordsCount,
+        processingIndicator: ProcessingIndicator,
+        state: State,
+        sorts: Sorts,
+        sortsHeaders: SortsHeaders,
+        queries: Queries,
+        inputsSearch: InputsSearch,
+        paginationPage: PaginationPage,
+        paginationPerPage: PaginationPerPage,
+        paginationLinks: PaginationLinks
+      },
+      utility,
+      build,
+      processAll,
+      initModel,
+      defaultRowWriter,
+      defaultCellWriter,
+      defaultAttributeWriter,
+      defaultAttributeReader;
 
-  /**
-   * IntroJs main class
-   *
-   * @class IntroJs
-   */
-  function IntroJs(obj) {
-    this._targetElement = obj;
-    this._introItems = [];
+  //-----------------------------------------------------------------
+  // Cached plugin global defaults
+  //-----------------------------------------------------------------
 
-    this._options = {
-      /* Next button label in tooltip box */
-      nextLabel: 'Next &rarr;',
-      /* Previous button label in tooltip box */
-      prevLabel: '&larr; Back',
-      /* Skip button label in tooltip box */
-      skipLabel: 'Skip',
-      /* Done button label in tooltip box */
-      doneLabel: 'Done',
-      /* Default tooltip box position */
-      tooltipPosition: 'bottom',
-      /* Next CSS class for tooltip boxes */
-      tooltipClass: '',
-      /* CSS class that is added to the helperLayer */
-      highlightClass: '',
-      /* Close introduction when pressing Escape button? */
-      exitOnEsc: true,
-      /* Close introduction when clicking on overlay layer? */
-      exitOnOverlayClick: true,
-      /* Show step numbers in introduction? */
-      showStepNumbers: true,
-      /* Let user use keyboard to navigate the tour? */
-      keyboardNavigation: true,
-      /* Show tour control buttons? */
-      showButtons: true,
-      /* Show tour bullets? */
-      showBullets: true,
-      /* Show tour progress? */
-      showProgress: false,
-      /* Scroll to highlighted element? */
-      scrollToElement: true,
-      /* Set the overlay opacity */
-      overlayOpacity: 0.8,
-      /* Precedence of positions, when auto is enabled */
-      positionPrecedence: ["bottom", "top", "right", "left"],
-      /* Disable an interaction with element? */
-      disableInteraction: false,
-      /* Default hint position */
-      hintPosition: 'top-middle',
-      /* Hint button label */
-      hintButtonLabel: 'Got it'
-    };
-  }
+  defaults = {
+    features: {
+      paginate: true,
+      sort: true,
+      pushState: true,
+      search: true,
+      recordCount: true,
+      perPageSelect: true
+    },
+    table: {
+      defaultColumnIdStyle: 'camelCase',
+      columns: null,
+      headRowSelector: 'thead tr', // or e.g. tr:first-child
+      bodyRowSelector: 'tbody tr',
+      headRowClass: null
+    },
+    inputs: {
+      queries: null,
+      sorts: null,
+      multisort: ['ctrlKey', 'shiftKey', 'metaKey'],
+      page: null,
+      queryEvent: 'blur change',
+      recordCountTarget: null,
+      recordCountPlacement: 'after',
+      paginationLinkTarget: null,
+      paginationLinkPlacement: 'after',
+      paginationClass: 'dynatable-pagination-links',
+      paginationLinkClass: 'dynatable-page-link',
+      paginationPrevClass: 'dynatable-page-prev',
+      paginationNextClass: 'dynatable-page-next',
+      paginationActiveClass: 'dynatable-active-page',
+      paginationDisabledClass: 'dynatable-disabled-page',
+      paginationPrev: 'Previous',
+      paginationNext: 'Next',
+      paginationGap: [1,2,2,1],
+      searchTarget: null,
+      searchPlacement: 'before',
+      perPageTarget: null,
+      perPagePlacement: 'before',
+      perPageText: 'Show: ',
+      recordCountText: 'Showing ',
+      processingText: 'Processing...'
+    },
+    dataset: {
+      ajax: false,
+      ajaxUrl: null,
+      ajaxCache: null,
+      ajaxOnLoad: false,
+      ajaxMethod: 'GET',
+      ajaxDataType: 'json',
+      totalRecordCount: null,
+      queries: {},
+      queryRecordCount: null,
+      page: null,
+      perPageDefault: 10,
+      perPageOptions: [10,20,50,100],
+      sorts: {},
+      sortsKeys: null,
+      sortTypes: {},
+      records: null
+    },
+    writers: {
+      _rowWriter: defaultRowWriter,
+      _cellWriter: defaultCellWriter,
+      _attributeWriter: defaultAttributeWriter
+    },
+    readers: {
+      _rowReader: null,
+      _attributeReader: defaultAttributeReader
+    },
+    params: {
+      dynatable: 'dynatable',
+      queries: 'queries',
+      sorts: 'sorts',
+      page: 'page',
+      perPage: 'perPage',
+      offset: 'offset',
+      records: 'records',
+      record: null,
+      queryRecordCount: 'queryRecordCount',
+      totalRecordCount: 'totalRecordCount'
+    }
+  };
 
-  /**
-   * Initiate a new introduction/guide from an element in the page
-   *
-   * @api private
-   * @method _introForElement
-   * @param {Object} targetElm
-   * @returns {Boolean} Success or not?
-   */
-  function _introForElement(targetElm) {
-    var introItems = [],
-        self = this;
+  //-----------------------------------------------------------------
+  // Each dynatable instance inherits from this,
+  // set properties specific to instance
+  //-----------------------------------------------------------------
 
-    if (this._options.steps) {
-      //use steps passed programmatically
-      for (var i = 0, stepsLength = this._options.steps.length; i < stepsLength; i++) {
-        var currentItem = _cloneObject(this._options.steps[i]);
-        //set the step
-        currentItem.step = introItems.length + 1;
-        //use querySelector function only when developer used CSS selector
-        if (typeof(currentItem.element) === 'string') {
-          //grab the element with given selector from the page
-          currentItem.element = document.querySelector(currentItem.element);
+  dt = {
+    init: function(element, options) {
+      this.settings = mergeSettings(options);
+      this.element = element;
+      this.$element = $(element);
+
+      // All the setup that doesn't require element or options
+      build.call(this);
+
+      return this;
+    },
+
+    process: function(skipPushState) {
+      processAll.call(this, skipPushState);
+    }
+  };
+
+  //-----------------------------------------------------------------
+  // Cached plugin global functions
+  //-----------------------------------------------------------------
+
+  mergeSettings = function(options) {
+    var newOptions = $.extend(true, {}, defaults, options);
+
+    // TODO: figure out a better way to do this.
+    // Doing `extend(true)` causes any elements that are arrays
+    // to merge the default and options arrays instead of overriding the defaults.
+    if (options) {
+      if (options.inputs) {
+        if (options.inputs.multisort) {
+          newOptions.inputs.multisort = options.inputs.multisort;
         }
-
-        //intro without element
-        if (typeof(currentItem.element) === 'undefined' || currentItem.element == null) {
-          var floatingElementQuery = document.querySelector(".introjsFloatingElement");
-
-          if (floatingElementQuery == null) {
-            floatingElementQuery = document.createElement('div');
-            floatingElementQuery.className = 'introjsFloatingElement';
-
-            document.body.appendChild(floatingElementQuery);
-          }
-
-          currentItem.element  = floatingElementQuery;
-          currentItem.position = 'floating';
-        }
-
-        if (currentItem.element != null) {
-          introItems.push(currentItem);
+        if (options.inputs.paginationGap) {
+          newOptions.inputs.paginationGap = options.inputs.paginationGap;
         }
       }
-
-    } else {
-      //use steps from data-* annotations
-      var allIntroSteps = targetElm.querySelectorAll('*[data-intro]');
-      //if there's no element to intro
-      if (allIntroSteps.length < 1) {
-        return false;
+      if (options.dataset && options.dataset.perPageOptions) {
+        newOptions.dataset.perPageOptions = options.dataset.perPageOptions;
       }
+    }
 
-      //first add intro items with data-step
-      for (var i = 0, elmsLength = allIntroSteps.length; i < elmsLength; i++) {
-        var currentElement = allIntroSteps[i];
-        var step = parseInt(currentElement.getAttribute('data-step'), 10);
+    return newOptions;
+  };
 
-        if (step > 0) {
-          introItems[step - 1] = {
-            element: currentElement,
-            intro: currentElement.getAttribute('data-intro'),
-            step: parseInt(currentElement.getAttribute('data-step'), 10),
-            tooltipClass: currentElement.getAttribute('data-tooltipClass'),
-            highlightClass: currentElement.getAttribute('data-highlightClass'),
-            position: currentElement.getAttribute('data-position') || this._options.tooltipPosition
-          };
-        }
-      }
+  build = function() {
+    this.$element.trigger('dynatable:preinit', this);
 
-      //next add intro items without data-step
-      //todo: we need a cleanup here, two loops are redundant
-      var nextStep = 0;
-      for (var i = 0, elmsLength = allIntroSteps.length; i < elmsLength; i++) {
-        var currentElement = allIntroSteps[i];
-
-        if (currentElement.getAttribute('data-step') == null) {
-
-          while (true) {
-            if (typeof introItems[nextStep] == 'undefined') {
-              break;
-            } else {
-              nextStep++;
-            }
-          }
-
-          introItems[nextStep] = {
-            element: currentElement,
-            intro: currentElement.getAttribute('data-intro'),
-            step: nextStep + 1,
-            tooltipClass: currentElement.getAttribute('data-tooltipClass'),
-            highlightClass: currentElement.getAttribute('data-highlightClass'),
-            position: currentElement.getAttribute('data-position') || this._options.tooltipPosition
-          };
+    for (model in modelPrototypes) {
+      if (modelPrototypes.hasOwnProperty(model)) {
+        var modelInstance = this[model] = new modelPrototypes[model](this, this.settings);
+        if (modelInstance.initOnLoad()) {
+          modelInstance.init();
         }
       }
     }
 
-    //removing undefined/null elements
-    var tempIntroItems = [];
-    for (var z = 0; z < introItems.length; z++) {
-      introItems[z] && tempIntroItems.push(introItems[z]);  // copy non-empty values to the end of the array
+    this.$element.trigger('dynatable:init', this);
+
+    if (!this.settings.dataset.ajax || (this.settings.dataset.ajax && this.settings.dataset.ajaxOnLoad) || this.settings.features.paginate) {
+      this.process();
     }
+  };
 
-    introItems = tempIntroItems;
+  processAll = function(skipPushState) {
+    var data = {};
 
-    //Ok, sort all items with given steps
-    introItems.sort(function (a, b) {
-      return a.step - b.step;
-    });
+    this.$element.trigger('dynatable:beforeProcess', data);
 
-    //set it to the introJs object
-    self._introItems = introItems;
+    if (!$.isEmptyObject(this.settings.dataset.queries)) { data[this.settings.params.queries] = this.settings.dataset.queries; }
+    // TODO: Wrap this in a try/rescue block to hide the processing indicator and indicate something went wrong if error
+    this.processingIndicator.show();
 
-    //add overlay layer to the page
-    if(_addOverlayLayer.call(self, targetElm)) {
-      //then, start the show
-      _nextStep.call(self);
+    if (this.settings.features.sort && !$.isEmptyObject(this.settings.dataset.sorts)) { data[this.settings.params.sorts] = this.settings.dataset.sorts; }
+    if (this.settings.features.paginate && this.settings.dataset.page) {
+      var page = this.settings.dataset.page,
+          perPage = this.settings.dataset.perPage;
+      data[this.settings.params.page] = page;
+      data[this.settings.params.perPage] = perPage;
+      data[this.settings.params.offset] = (page - 1) * perPage;
+    }
+    if (this.settings.dataset.ajaxData) { $.extend(data, this.settings.dataset.ajaxData); }
 
-      var skipButton     = targetElm.querySelector('.introjs-skipbutton'),
-          nextStepButton = targetElm.querySelector('.introjs-nextbutton');
+    // If ajax, sends query to ajaxUrl with queries and sorts serialized and appended in ajax data
+    // otherwise, executes queries and sorts on in-page data
+    if (this.settings.dataset.ajax) {
+      var _this = this;
+      var options = {
+        type: _this.settings.dataset.ajaxMethod,
+        dataType: _this.settings.dataset.ajaxDataType,
+        data: data,
+        error: function(xhr, error) {
+        },
+        success: function(response) {
+          _this.$element.trigger('dynatable:ajax:success', response);
+          // Merge ajax results and meta-data into dynatables cached data
+          _this.records.updateFromJson(response);
+          // update table with new records
+          _this.dom.update();
 
-      self._onKeyDown = function(e) {
-        if (e.keyCode === 27 && self._options.exitOnEsc == true) {
-          //escape key pressed, exit the intro
-          //check if exit callback is defined
-          if (self._introExitCallback != undefined) {
-            self._introExitCallback.call(self);
+          if (!skipPushState && _this.state.initOnLoad()) {
+            _this.state.push(data);
           }
-          _exitIntro.call(self, targetElm);
-        } else if(e.keyCode === 37) {
-          //left arrow
-          _previousStep.call(self);
-        } else if (e.keyCode === 39) {
-          //right arrow
-          _nextStep.call(self);
-        } else if (e.keyCode === 13) {
-          //srcElement === ie
-          var target = e.target || e.srcElement;
-          if (target && target.className.indexOf('introjs-prevbutton') > 0) {
-            //user hit enter while focusing on previous button
-            _previousStep.call(self);
-          } else if (target && target.className.indexOf('introjs-skipbutton') > 0) {
-            //user hit enter while focusing on skip button
-            if (self._introItems.length - 1 == self._currentStep && typeof (self._introCompleteCallback) === 'function') {
-                self._introCompleteCallback.call(self);
-            }
-            //check if any callback is defined
-            if (self._introExitCallback != undefined) {
-              self._introExitCallback.call(self);
-            }
-            _exitIntro.call(self, targetElm);
-          } else {
-            //default behavior for responding to enter
-            _nextStep.call(self);
-          }
-
-          //prevent default behaviour on hitting Enter, to prevent steps being skipped in some browsers
-          if(e.preventDefault) {
-            e.preventDefault();
-          } else {
-            e.returnValue = false;
-          }
+        },
+        complete: function() {
+          _this.processingIndicator.hide();
         }
       };
-
-      self._onResize = function(e) {
-        _setHelperLayerPosition.call(self, document.querySelector('.introjs-helperLayer'));
-        _setHelperLayerPosition.call(self, document.querySelector('.introjs-tooltipReferenceLayer'));
-      };
-
-      if (window.addEventListener) {
-        if (this._options.keyboardNavigation) {
-          window.addEventListener('keydown', self._onKeyDown, true);
-        }
-        //for window resize
-        window.addEventListener('resize', self._onResize, true);
-      } else if (document.attachEvent) { //IE
-        if (this._options.keyboardNavigation) {
-          document.attachEvent('onkeydown', self._onKeyDown);
-        }
-        //for window resize
-        document.attachEvent('onresize', self._onResize);
-      }
-    }
-    return false;
-  }
-
- /*
-   * makes a copy of the object
-   * @api private
-   * @method _cloneObject
-  */
-  function _cloneObject(object) {
-      if (object == null || typeof (object) != 'object' || typeof (object.nodeType) != 'undefined') {
-        return object;
-      }
-      var temp = {};
-      for (var key in object) {
-        if (typeof (jQuery) != 'undefined' && object[key] instanceof jQuery) {
-          temp[key] = object[key];
-        } else {
-          temp[key] = _cloneObject(object[key]);
-        }
-      }
-      return temp;
-  }
-  /**
-   * Go to specific step of introduction
-   *
-   * @api private
-   * @method _goToStep
-   */
-  function _goToStep(step) {
-    //because steps starts with zero
-    this._currentStep = step - 2;
-    if (typeof (this._introItems) !== 'undefined') {
-      _nextStep.call(this);
-    }
-  }
-
-  /**
-   * Go to next step on intro
-   *
-   * @api private
-   * @method _nextStep
-   */
-  function _nextStep() {
-    this._direction = 'forward';
-
-    if (typeof (this._currentStep) === 'undefined') {
-      this._currentStep = 0;
-    } else {
-      ++this._currentStep;
-    }
-
-    if ((this._introItems.length) <= this._currentStep) {
-      //end of the intro
-      //check if any callback is defined
-      if (typeof (this._introCompleteCallback) === 'function') {
-        this._introCompleteCallback.call(this);
-      }
-      _exitIntro.call(this, this._targetElement);
-      return;
-    }
-
-    var nextStep = this._introItems[this._currentStep];
-    if (typeof (this._introBeforeChangeCallback) !== 'undefined') {
-      this._introBeforeChangeCallback.call(this, nextStep.element);
-    }
-
-    _showElement.call(this, nextStep);
-  }
-
-  /**
-   * Go to previous step on intro
-   *
-   * @api private
-   * @method _nextStep
-   */
-  function _previousStep() {
-    this._direction = 'backward';
-
-    if (this._currentStep === 0) {
-      return false;
-    }
-
-    var nextStep = this._introItems[--this._currentStep];
-    if (typeof (this._introBeforeChangeCallback) !== 'undefined') {
-      this._introBeforeChangeCallback.call(this, nextStep.element);
-    }
-
-    _showElement.call(this, nextStep);
-  }
-
-  /**
-   * Exit from intro
-   *
-   * @api private
-   * @method _exitIntro
-   * @param {Object} targetElement
-   */
-  function _exitIntro(targetElement) {
-    //remove overlay layer from the page
-    var overlayLayer = targetElement.querySelector('.introjs-overlay');
-
-    //return if intro already completed or skipped
-    if (overlayLayer == null) {
-      return;
-    }
-
-    //for fade-out animation
-    overlayLayer.style.opacity = 0;
-    setTimeout(function () {
-      if (overlayLayer.parentNode) {
-        overlayLayer.parentNode.removeChild(overlayLayer);
-      }
-    }, 500);
-
-    //remove all helper layers
-    var helperLayer = targetElement.querySelector('.introjs-helperLayer');
-    if (helperLayer) {
-      helperLayer.parentNode.removeChild(helperLayer);
-    }
-
-    var referenceLayer = targetElement.querySelector('.introjs-tooltipReferenceLayer');
-    if (referenceLayer) {
-      referenceLayer.parentNode.removeChild(referenceLayer);
-    }
-    //remove disableInteractionLayer
-    var disableInteractionLayer = targetElement.querySelector('.introjs-disableInteraction');
-    if (disableInteractionLayer) {
-      disableInteractionLayer.parentNode.removeChild(disableInteractionLayer);
-    }
-
-    //remove intro floating element
-    var floatingElement = document.querySelector('.introjsFloatingElement');
-    if (floatingElement) {
-      floatingElement.parentNode.removeChild(floatingElement);
-    }
-
-    //remove `introjs-showElement` class from the element
-    var showElement = document.querySelector('.introjs-showElement');
-    if (showElement) {
-      showElement.className = showElement.className.replace(/introjs-[a-zA-Z]+/g, '').replace(/^\s+|\s+$/g, ''); // This is a manual trim.
-    }
-
-    //remove `introjs-fixParent` class from the elements
-    var fixParents = document.querySelectorAll('.introjs-fixParent');
-    if (fixParents && fixParents.length > 0) {
-      for (var i = fixParents.length - 1; i >= 0; i--) {
-        fixParents[i].className = fixParents[i].className.replace(/introjs-fixParent/g, '').replace(/^\s+|\s+$/g, '');
-      }
-    }
-
-    //clean listeners
-    if (window.removeEventListener) {
-      window.removeEventListener('keydown', this._onKeyDown, true);
-    } else if (document.detachEvent) { //IE
-      document.detachEvent('onkeydown', this._onKeyDown);
-    }
-
-    //set the step to zero
-    this._currentStep = undefined;
-  }
-
-  /**
-   * Render tooltip box in the page
-   *
-   * @api private
-   * @method _placeTooltip
-   * @param {HTMLElement} targetElement
-   * @param {HTMLElement} tooltipLayer
-   * @param {HTMLElement} arrowLayer
-   * @param {HTMLElement} helperNumberLayer
-   * @param {Boolean} hintMode
-   */
-  function _placeTooltip(targetElement, tooltipLayer, arrowLayer, helperNumberLayer, hintMode) {
-    var tooltipCssClass = '',
-        currentStepObj,
-        tooltipOffset,
-        targetOffset,
-        windowSize,
-        currentTooltipPosition;
-
-    hintMode = hintMode || false;
-
-    //reset the old style
-    tooltipLayer.style.top        = null;
-    tooltipLayer.style.right      = null;
-    tooltipLayer.style.bottom     = null;
-    tooltipLayer.style.left       = null;
-    tooltipLayer.style.marginLeft = null;
-    tooltipLayer.style.marginTop  = null;
-
-    arrowLayer.style.display = 'inherit';
-
-    if (typeof(helperNumberLayer) != 'undefined' && helperNumberLayer != null) {
-      helperNumberLayer.style.top  = null;
-      helperNumberLayer.style.left = null;
-    }
-
-    //prevent error when `this._currentStep` is undefined
-    if (!this._introItems[this._currentStep]) return;
-
-    //if we have a custom css class for each step
-    currentStepObj = this._introItems[this._currentStep];
-    if (typeof (currentStepObj.tooltipClass) === 'string') {
-      tooltipCssClass = currentStepObj.tooltipClass;
-    } else {
-      tooltipCssClass = this._options.tooltipClass;
-    }
-
-    tooltipLayer.className = ('introjs-tooltip ' + tooltipCssClass).replace(/^\s+|\s+$/g, '');
-
-    currentTooltipPosition = this._introItems[this._currentStep].position;
-    if ((currentTooltipPosition == "auto" || this._options.tooltipPosition == "auto")) {
-      if (currentTooltipPosition != "floating") { // Floating is always valid, no point in calculating
-        currentTooltipPosition = _determineAutoPosition.call(this, targetElement, tooltipLayer, currentTooltipPosition);
-      }
-    }
-    targetOffset  = _getOffset(targetElement);
-    tooltipOffset = _getOffset(tooltipLayer);
-    windowSize    = _getWinSize();
-
-    switch (currentTooltipPosition) {
-      case 'top':
-        arrowLayer.className = 'introjs-arrow bottom';
-
-        if (hintMode) {
-          var tooltipLayerStyleLeft = 0;
-        } else {
-          var tooltipLayerStyleLeft = 15;
-        }
-
-        _checkRight(targetOffset, tooltipLayerStyleLeft, tooltipOffset, windowSize, tooltipLayer);
-        tooltipLayer.style.bottom = (targetOffset.height +  20) + 'px';
-        break;
-      case 'right':
-        tooltipLayer.style.left = (targetOffset.width + 20) + 'px';
-        if (targetOffset.top + tooltipOffset.height > windowSize.height) {
-          // In this case, right would have fallen below the bottom of the screen.
-          // Modify so that the bottom of the tooltip connects with the target
-          arrowLayer.className = "introjs-arrow left-bottom";
-          tooltipLayer.style.top = "-" + (tooltipOffset.height - targetOffset.height - 20) + "px";
-        } else {
-          arrowLayer.className = 'introjs-arrow left';
-        }
-        break;
-      case 'left':
-        if (!hintMode && this._options.showStepNumbers == true) {
-          tooltipLayer.style.top = '15px';
-        }
-
-        if (targetOffset.top + tooltipOffset.height > windowSize.height) {
-          // In this case, left would have fallen below the bottom of the screen.
-          // Modify so that the bottom of the tooltip connects with the target
-          tooltipLayer.style.top = "-" + (tooltipOffset.height - targetOffset.height - 20) + "px";
-          arrowLayer.className = 'introjs-arrow right-bottom';
-        } else {
-          arrowLayer.className = 'introjs-arrow right';
-        }
-        tooltipLayer.style.right = (targetOffset.width + 20) + 'px';
-
-        break;
-      case 'floating':
-        arrowLayer.style.display = 'none';
-
-        //we have to adjust the top and left of layer manually for intro items without element
-        tooltipLayer.style.left   = '50%';
-        tooltipLayer.style.top    = '50%';
-        tooltipLayer.style.marginLeft = '-' + (tooltipOffset.width / 2)  + 'px';
-        tooltipLayer.style.marginTop  = '-' + (tooltipOffset.height / 2) + 'px';
-
-        if (typeof(helperNumberLayer) != 'undefined' && helperNumberLayer != null) {
-          helperNumberLayer.style.left = '-' + ((tooltipOffset.width / 2) + 18) + 'px';
-          helperNumberLayer.style.top  = '-' + ((tooltipOffset.height / 2) + 18) + 'px';
-        }
-
-        break;
-      case 'bottom-right-aligned':
-        arrowLayer.className      = 'introjs-arrow top-right';
-
-        var tooltipLayerStyleRight = 0;
-        _checkLeft(targetOffset, tooltipLayerStyleRight, tooltipOffset, tooltipLayer);
-        tooltipLayer.style.top    = (targetOffset.height +  20) + 'px';
-        break;
-
-      case 'bottom-middle-aligned':
-        arrowLayer.className      = 'introjs-arrow top-middle';
-
-        var tooltipLayerStyleLeftRight = targetOffset.width / 2 - tooltipOffset.width / 2;
-
-        // a fix for middle aligned hints
-        if (hintMode) {
-          tooltipLayerStyleLeftRight += 5;
-        }
-
-        if (_checkLeft(targetOffset, tooltipLayerStyleLeftRight, tooltipOffset, tooltipLayer)) {
-          tooltipLayer.style.right = null;
-          _checkRight(targetOffset, tooltipLayerStyleLeftRight, tooltipOffset, windowSize, tooltipLayer);
-        }
-        tooltipLayer.style.top = (targetOffset.height + 20) + 'px';
-        break;
-
-      case 'bottom-left-aligned':
-      // Bottom-left-aligned is the same as the default bottom
-      case 'bottom':
-      // Bottom going to follow the default behavior
-      default:
-        arrowLayer.className = 'introjs-arrow top';
-
-        var tooltipLayerStyleLeft = 0;
-        _checkRight(targetOffset, tooltipLayerStyleLeft, tooltipOffset, windowSize, tooltipLayer);
-        tooltipLayer.style.top    = (targetOffset.height +  20) + 'px';
-        break;
-    }
-  }
-
-  /**
-   * Set tooltip left so it doesn't go off the right side of the window
-   *
-   * @return boolean true, if tooltipLayerStyleLeft is ok.  false, otherwise.
-   */
-  function _checkRight(targetOffset, tooltipLayerStyleLeft, tooltipOffset, windowSize, tooltipLayer) {
-    if (targetOffset.left + tooltipLayerStyleLeft + tooltipOffset.width > windowSize.width) {
-      // off the right side of the window
-      tooltipLayer.style.left = (windowSize.width - tooltipOffset.width - targetOffset.left) + 'px';
-      return false;
-    }
-    tooltipLayer.style.left = tooltipLayerStyleLeft + 'px';
-    return true;
-  }
-
-  /**
-   * Set tooltip right so it doesn't go off the left side of the window
-   *
-   * @return boolean true, if tooltipLayerStyleRight is ok.  false, otherwise.
-   */
-  function _checkLeft(targetOffset, tooltipLayerStyleRight, tooltipOffset, tooltipLayer) {
-    if (targetOffset.left + targetOffset.width - tooltipLayerStyleRight - tooltipOffset.width < 0) {
-      // off the left side of the window
-      tooltipLayer.style.left = (-targetOffset.left) + 'px';
-      return false;
-    }
-    tooltipLayer.style.right = tooltipLayerStyleRight + 'px';
-    return true;
-  }
-
-  /**
-   * Determines the position of the tooltip based on the position precedence and availability
-   * of screen space.
-   *
-   * @param {Object} targetElement
-   * @param {Object} tooltipLayer
-   * @param {Object} desiredTooltipPosition
-   *
-   */
-  function _determineAutoPosition(targetElement, tooltipLayer, desiredTooltipPosition) {
-
-    // Take a clone of position precedence. These will be the available
-    var possiblePositions = this._options.positionPrecedence.slice();
-
-    var windowSize = _getWinSize();
-    var tooltipHeight = _getOffset(tooltipLayer).height + 10;
-    var tooltipWidth = _getOffset(tooltipLayer).width + 20;
-    var targetOffset = _getOffset(targetElement);
-
-    // If we check all the possible areas, and there are no valid places for the tooltip, the element
-    // must take up most of the screen real estate. Show the tooltip floating in the middle of the screen.
-    var calculatedPosition = "floating";
-
-    // Check if the width of the tooltip + the starting point would spill off the right side of the screen
-    // If no, neither bottom or top are valid
-    if (targetOffset.left + tooltipWidth > windowSize.width || ((targetOffset.left + (targetOffset.width / 2)) - tooltipWidth) < 0) {
-      _removeEntry(possiblePositions, "bottom");
-      _removeEntry(possiblePositions, "top");
-    } else {
-      // Check for space below
-      if ((targetOffset.height + targetOffset.top + tooltipHeight) > windowSize.height) {
-        _removeEntry(possiblePositions, "bottom");
-      }
-
-      // Check for space above
-      if (targetOffset.top - tooltipHeight < 0) {
-        _removeEntry(possiblePositions, "top");
-      }
-    }
-
-    // Check for space to the right
-    if (targetOffset.width + targetOffset.left + tooltipWidth > windowSize.width) {
-      _removeEntry(possiblePositions, "right");
-    }
-
-    // Check for space to the left
-    if (targetOffset.left - tooltipWidth < 0) {
-      _removeEntry(possiblePositions, "left");
-    }
-
-    // At this point, our array only has positions that are valid. Pick the first one, as it remains in order
-    if (possiblePositions.length > 0) {
-      calculatedPosition = possiblePositions[0];
-    }
-
-    // If the requested position is in the list, replace our calculated choice with that
-    if (desiredTooltipPosition && desiredTooltipPosition != "auto") {
-      if (possiblePositions.indexOf(desiredTooltipPosition) > -1) {
-        calculatedPosition = desiredTooltipPosition;
-      }
-    }
-
-    return calculatedPosition;
-  }
-
-  /**
-   * Remove an entry from a string array if it's there, does nothing if it isn't there.
-   *
-   * @param {Array} stringArray
-   * @param {String} stringToRemove
-   */
-  function _removeEntry(stringArray, stringToRemove) {
-    if (stringArray.indexOf(stringToRemove) > -1) {
-      stringArray.splice(stringArray.indexOf(stringToRemove), 1);
-    }
-  }
-
-  /**
-   * Update the position of the helper layer on the screen
-   *
-   * @api private
-   * @method _setHelperLayerPosition
-   * @param {Object} helperLayer
-   */
-  function _setHelperLayerPosition(helperLayer) {
-    if (helperLayer) {
-      //prevent error when `this._currentStep` in undefined
-      if (!this._introItems[this._currentStep]) return;
-
-      var currentElement  = this._introItems[this._currentStep],
-          elementPosition = _getOffset(currentElement.element),
-          widthHeightPadding = 10;
-
-      // if the target element is fixed, the tooltip should be fixed as well.
-      if (_isFixed(currentElement.element)) {
-        helperLayer.className += ' introjs-fixedTooltip';
-      }
-
-      if (currentElement.position == 'floating') {
-        widthHeightPadding = 0;
-      }
-
-      //set new position to helper layer
-      helperLayer.setAttribute('style', 'width: ' + (elementPosition.width  + widthHeightPadding)  + 'px; ' +
-                                        'height:' + (elementPosition.height + widthHeightPadding)  + 'px; ' +
-                                        'top:'    + (elementPosition.top    - 5)   + 'px;' +
-                                        'left: '  + (elementPosition.left   - 5)   + 'px;');
-
-    }
-  }
-
-  /**
-   * Add disableinteraction layer and adjust the size and position of the layer
-   *
-   * @api private
-   * @method _disableInteraction
-   */
-  function _disableInteraction() {
-    var disableInteractionLayer = document.querySelector('.introjs-disableInteraction');
-    if (disableInteractionLayer === null) {
-      disableInteractionLayer = document.createElement('div');
-      disableInteractionLayer.className = 'introjs-disableInteraction';
-      this._targetElement.appendChild(disableInteractionLayer);
-    }
-
-    _setHelperLayerPosition.call(this, disableInteractionLayer);
-  }
-
-  /**
-   * Show an element on the page
-   *
-   * @api private
-   * @method _showElement
-   * @param {Object} targetElement
-   */
-  function _showElement(targetElement) {
-
-    if (typeof (this._introChangeCallback) !== 'undefined') {
-      this._introChangeCallback.call(this, targetElement.element);
-    }
-
-    var self = this,
-        oldHelperLayer = document.querySelector('.introjs-helperLayer'),
-        oldReferenceLayer = document.querySelector('.introjs-tooltipReferenceLayer'),
-        highlightClass = 'introjs-helperLayer',
-        elementPosition = _getOffset(targetElement.element);
-
-    //check for a current step highlight class
-    if (typeof (targetElement.highlightClass) === 'string') {
-      highlightClass += (' ' + targetElement.highlightClass);
-    }
-    //check for options highlight class
-    if (typeof (this._options.highlightClass) === 'string') {
-      highlightClass += (' ' + this._options.highlightClass);
-    }
-
-    if (oldHelperLayer != null) {
-      var oldHelperNumberLayer = oldReferenceLayer.querySelector('.introjs-helperNumberLayer'),
-          oldtooltipLayer      = oldReferenceLayer.querySelector('.introjs-tooltiptext'),
-          oldArrowLayer        = oldReferenceLayer.querySelector('.introjs-arrow'),
-          oldtooltipContainer  = oldReferenceLayer.querySelector('.introjs-tooltip'),
-          skipTooltipButton    = oldReferenceLayer.querySelector('.introjs-skipbutton'),
-          prevTooltipButton    = oldReferenceLayer.querySelector('.introjs-prevbutton'),
-          nextTooltipButton    = oldReferenceLayer.querySelector('.introjs-nextbutton');
-
-      //update or reset the helper highlight class
-      oldHelperLayer.className = highlightClass;
-      //hide the tooltip
-      oldtooltipContainer.style.opacity = 0;
-      oldtooltipContainer.style.display = "none";
-
-      if (oldHelperNumberLayer != null) {
-        var lastIntroItem = this._introItems[(targetElement.step - 2 >= 0 ? targetElement.step - 2 : 0)];
-
-        if (lastIntroItem != null && (this._direction == 'forward' && lastIntroItem.position == 'floating') || (this._direction == 'backward' && targetElement.position == 'floating')) {
-          oldHelperNumberLayer.style.opacity = 0;
-        }
-      }
-
-      //set new position to helper layer
-      _setHelperLayerPosition.call(self, oldHelperLayer);
-      _setHelperLayerPosition.call(self, oldReferenceLayer);
-
-      //remove `introjs-fixParent` class from the elements
-      var fixParents = document.querySelectorAll('.introjs-fixParent');
-      if (fixParents && fixParents.length > 0) {
-        for (var i = fixParents.length - 1; i >= 0; i--) {
-          fixParents[i].className = fixParents[i].className.replace(/introjs-fixParent/g, '').replace(/^\s+|\s+$/g, '');
-        };
-      }
-
-      //remove old classes
-      var oldShowElement = document.querySelector('.introjs-showElement');
-      oldShowElement.className = oldShowElement.className.replace(/introjs-[a-zA-Z]+/g, '').replace(/^\s+|\s+$/g, '');
-
-      //we should wait until the CSS3 transition is competed (it's 0.3 sec) to prevent incorrect `height` and `width` calculation
-      if (self._lastShowElementTimer) {
-        clearTimeout(self._lastShowElementTimer);
-      }
-      self._lastShowElementTimer = setTimeout(function() {
-        //set current step to the label
-        if (oldHelperNumberLayer != null) {
-          oldHelperNumberLayer.innerHTML = targetElement.step;
-        }
-        //set current tooltip text
-        oldtooltipLayer.innerHTML = targetElement.intro;
-        //set the tooltip position
-        oldtooltipContainer.style.display = "block";
-        _placeTooltip.call(self, targetElement.element, oldtooltipContainer, oldArrowLayer, oldHelperNumberLayer);
-
-        //change active bullet
-        oldReferenceLayer.querySelector('.introjs-bullets li > a.active').className = '';
-        oldReferenceLayer.querySelector('.introjs-bullets li > a[data-stepnumber="' + targetElement.step + '"]').className = 'active';
-
-        oldReferenceLayer.querySelector('.introjs-progress .introjs-progressbar').setAttribute('style', 'width:' + _getProgress.call(self) + '%;');
-
-        //show the tooltip
-        oldtooltipContainer.style.opacity = 1;
-        if (oldHelperNumberLayer) oldHelperNumberLayer.style.opacity = 1;
-
-        //reset button focus
-        if (nextTooltipButton.tabIndex === -1) {
-          //tabindex of -1 means we are at the end of the tour - focus on skip / done
-          skipTooltipButton.focus();
-        } else {
-          //still in the tour, focus on next
-          nextTooltipButton.focus();
-        }
-      }, 350);
-
-    } else {
-      var helperLayer       = document.createElement('div'),
-          referenceLayer    = document.createElement('div'),
-          arrowLayer        = document.createElement('div'),
-          tooltipLayer      = document.createElement('div'),
-          tooltipTextLayer  = document.createElement('div'),
-          bulletsLayer      = document.createElement('div'),
-          progressLayer     = document.createElement('div'),
-          buttonsLayer      = document.createElement('div');
-
-      helperLayer.className = highlightClass;
-      referenceLayer.className = 'introjs-tooltipReferenceLayer';
-
-      //set new position to helper layer
-      _setHelperLayerPosition.call(self, helperLayer);
-      _setHelperLayerPosition.call(self, referenceLayer);
-
-      //add helper layer to target element
-      this._targetElement.appendChild(helperLayer);
-      this._targetElement.appendChild(referenceLayer);
-
-      arrowLayer.className = 'introjs-arrow';
-
-      tooltipTextLayer.className = 'introjs-tooltiptext';
-      tooltipTextLayer.innerHTML = targetElement.intro;
-
-      bulletsLayer.className = 'introjs-bullets';
-
-      if (this._options.showBullets === false) {
-        bulletsLayer.style.display = 'none';
-      }
-
-      var ulContainer = document.createElement('ul');
-
-      for (var i = 0, stepsLength = this._introItems.length; i < stepsLength; i++) {
-        var innerLi    = document.createElement('li');
-        var anchorLink = document.createElement('a');
-
-        anchorLink.onclick = function() {
-          self.goToStep(this.getAttribute('data-stepnumber'));
-        };
-
-        if (i === (targetElement.step-1)) anchorLink.className = 'active';
-
-        anchorLink.href = 'javascript:void(0);';
-        anchorLink.innerHTML = "&nbsp;";
-        anchorLink.setAttribute('data-stepnumber', this._introItems[i].step);
-
-        innerLi.appendChild(anchorLink);
-        ulContainer.appendChild(innerLi);
-      }
-
-      bulletsLayer.appendChild(ulContainer);
-
-      progressLayer.className = 'introjs-progress';
-
-      if (this._options.showProgress === false) {
-        progressLayer.style.display = 'none';
-      }
-      var progressBar = document.createElement('div');
-      progressBar.className = 'introjs-progressbar';
-      progressBar.setAttribute('style', 'width:' + _getProgress.call(this) + '%;');
-
-      progressLayer.appendChild(progressBar);
-
-      buttonsLayer.className = 'introjs-tooltipbuttons';
-      if (this._options.showButtons === false) {
-        buttonsLayer.style.display = 'none';
-      }
-
-      tooltipLayer.className = 'introjs-tooltip';
-      tooltipLayer.appendChild(tooltipTextLayer);
-      tooltipLayer.appendChild(bulletsLayer);
-      tooltipLayer.appendChild(progressLayer);
-
-      //add helper layer number
-      if (this._options.showStepNumbers == true) {
-        var helperNumberLayer = document.createElement('span');
-        helperNumberLayer.className = 'introjs-helperNumberLayer';
-        helperNumberLayer.innerHTML = targetElement.step;
-        referenceLayer.appendChild(helperNumberLayer);
-      }
-
-      tooltipLayer.appendChild(arrowLayer);
-      referenceLayer.appendChild(tooltipLayer);
-
-      //next button
-      var nextTooltipButton = document.createElement('a');
-
-      nextTooltipButton.onclick = function() {
-        if (self._introItems.length - 1 != self._currentStep) {
-          _nextStep.call(self);
-        }
-      };
-
-      nextTooltipButton.href = 'javascript:void(0);';
-      nextTooltipButton.innerHTML = this._options.nextLabel;
-
-      //previous button
-      var prevTooltipButton = document.createElement('a');
-
-      prevTooltipButton.onclick = function() {
-        if (self._currentStep != 0) {
-          _previousStep.call(self);
-        }
-      };
-
-      prevTooltipButton.href = 'javascript:void(0);';
-      prevTooltipButton.innerHTML = this._options.prevLabel;
-
-      //skip button
-      var skipTooltipButton = document.createElement('a');
-      skipTooltipButton.className = 'introjs-button introjs-skipbutton';
-      skipTooltipButton.href = 'javascript:void(0);';
-      skipTooltipButton.innerHTML = this._options.skipLabel;
-
-      skipTooltipButton.onclick = function() {
-        if (self._introItems.length - 1 == self._currentStep && typeof (self._introCompleteCallback) === 'function') {
-          self._introCompleteCallback.call(self);
-        }
-
-        if (self._introItems.length - 1 != self._currentStep && typeof (self._introExitCallback) === 'function') {
-          self._introExitCallback.call(self);
-        }
-
-        _exitIntro.call(self, self._targetElement);
-      };
-
-      buttonsLayer.appendChild(skipTooltipButton);
-
-      //in order to prevent displaying next/previous button always
-      if (this._introItems.length > 1) {
-        buttonsLayer.appendChild(prevTooltipButton);
-        buttonsLayer.appendChild(nextTooltipButton);
-      }
-
-      tooltipLayer.appendChild(buttonsLayer);
-
-      //set proper position
-      _placeTooltip.call(self, targetElement.element, tooltipLayer, arrowLayer, helperNumberLayer);
-    }
-
-    //disable interaction
-    if (this._options.disableInteraction === true) {
-      _disableInteraction.call(self);
-    }
-
-    prevTooltipButton.removeAttribute('tabIndex');
-    nextTooltipButton.removeAttribute('tabIndex');
-
-    if (this._currentStep == 0 && this._introItems.length > 1) {
-      prevTooltipButton.className = 'introjs-button introjs-prevbutton introjs-disabled';
-      prevTooltipButton.tabIndex = '-1';
-      nextTooltipButton.className = 'introjs-button introjs-nextbutton';
-      skipTooltipButton.innerHTML = this._options.skipLabel;
-    } else if (this._introItems.length - 1 == this._currentStep || this._introItems.length == 1) {
-      skipTooltipButton.innerHTML = this._options.doneLabel;
-      prevTooltipButton.className = 'introjs-button introjs-prevbutton';
-      nextTooltipButton.className = 'introjs-button introjs-nextbutton introjs-disabled';
-      nextTooltipButton.tabIndex = '-1';
-    } else {
-      prevTooltipButton.className = 'introjs-button introjs-prevbutton';
-      nextTooltipButton.className = 'introjs-button introjs-nextbutton';
-      skipTooltipButton.innerHTML = this._options.skipLabel;
-    }
-
-    //Set focus on "next" button, so that hitting Enter always moves you onto the next step
-    nextTooltipButton.focus();
-
-    //add target element position style
-    targetElement.element.className += ' introjs-showElement';
-
-    var currentElementPosition = _getPropValue(targetElement.element, 'position');
-    if (currentElementPosition !== 'absolute' &&
-        currentElementPosition !== 'relative') {
-      //change to new intro item
-      targetElement.element.className += ' introjs-relativePosition';
-    }
-
-    var parentElm = targetElement.element.parentNode;
-    while (parentElm != null) {
-      if (parentElm.tagName.toLowerCase() === 'body') break;
-
-      //fix The Stacking Contenxt problem.
-      //More detail: https://developer.mozilla.org/en-US/docs/Web/Guide/CSS/Understanding_z_index/The_stacking_context
-      var zIndex = _getPropValue(parentElm, 'z-index');
-      var opacity = parseFloat(_getPropValue(parentElm, 'opacity'));
-      var transform = _getPropValue(parentElm, 'transform') || _getPropValue(parentElm, '-webkit-transform') || _getPropValue(parentElm, '-moz-transform') || _getPropValue(parentElm, '-ms-transform') || _getPropValue(parentElm, '-o-transform');
-      if (/[0-9]+/.test(zIndex) || opacity < 1 || (transform !== 'none' && transform !== undefined)) {
-        parentElm.className += ' introjs-fixParent';
-      }
-
-      parentElm = parentElm.parentNode;
-    }
-
-    if (!_elementInViewport(targetElement.element) && this._options.scrollToElement === true) {
-      var rect = targetElement.element.getBoundingClientRect(),
-        winHeight = _getWinSize().height,
-        top = rect.bottom - (rect.bottom - rect.top),
-        bottom = rect.bottom - winHeight;
-
-      //Scroll up
-      if (top < 0 || targetElement.element.clientHeight > winHeight) {
-        window.scrollBy(0, top - 30); // 30px padding from edge to look nice
-
-      //Scroll down
+      // Do not pass url to `ajax` options if blank
+      if (this.settings.dataset.ajaxUrl) {
+        options.url = this.settings.dataset.ajaxUrl;
+
+      // If ajaxUrl is blank, then we're using the current page URL,
+      // we need to strip out any query, sort, or page data controlled by dynatable
+      // that may have been in URL when page loaded, so that it doesn't conflict with
+      // what's passed in with the data ajax parameter
       } else {
-        window.scrollBy(0, bottom + 100); // 70px + 30px padding from edge to look nice
+        options.url = utility.refreshQueryString(window.location.href, {}, this.settings);
+      }
+      if (this.settings.dataset.ajaxCache !== null) { options.cache = this.settings.dataset.ajaxCache; }
+
+      $.ajax(options);
+    } else {
+      this.records.resetOriginal();
+      this.queries.run();
+      if (this.settings.features.sort) {
+        this.records.sort();
+      }
+      if (this.settings.features.paginate) {
+        this.records.paginate();
+      }
+      this.dom.update();
+      this.processingIndicator.hide();
+
+      if (!skipPushState && this.state.initOnLoad()) {
+        this.state.push(data);
       }
     }
-
-    if (typeof (this._introAfterChangeCallback) !== 'undefined') {
-      this._introAfterChangeCallback.call(this, targetElement.element);
-    }
-  }
-
-  /**
-   * Get an element CSS property on the page
-   * Thanks to JavaScript Kit: http://www.javascriptkit.com/dhtmltutors/dhtmlcascade4.shtml
-   *
-   * @api private
-   * @method _getPropValue
-   * @param {Object} element
-   * @param {String} propName
-   * @returns Element's property value
-   */
-  function _getPropValue (element, propName) {
-    var propValue = '';
-    if (element.currentStyle) { //IE
-      propValue = element.currentStyle[propName];
-    } else if (document.defaultView && document.defaultView.getComputedStyle) { //Others
-      propValue = document.defaultView.getComputedStyle(element, null).getPropertyValue(propName);
-    }
-
-    //Prevent exception in IE
-    if (propValue && propValue.toLowerCase) {
-      return propValue.toLowerCase();
-    } else {
-      return propValue;
-    }
+    this.$element.trigger('dynatable:afterProcess', data);
   };
 
-  /**
-   * Checks to see if target element (or parents) position is fixed or not
-   *
-   * @api private
-   * @method _isFixed
-   * @param {Object} element
-   * @returns Boolean
-   */
-  function _isFixed (element) {
-    var p = element.parentNode;
+  function defaultRowWriter(rowIndex, record, columns, cellWriter) {
+    var tr = '';
 
-    if (p.nodeName === 'HTML') {
-      return false;
+    // grab the record's attribute for each column
+    for (var i = 0, len = columns.length; i < len; i++) {
+      tr += cellWriter(columns[i], record);
     }
 
-    if (_getPropValue(element, 'position') == 'fixed') {
+    return '<tr>' + tr + '</tr>';
+  };
+
+  function defaultCellWriter(column, record) {
+    var html = column.attributeWriter(record),
+        td = '<td';
+
+    if (column.hidden || column.textAlign) {
+      td += ' style="';
+
+      // keep cells for hidden column headers hidden
+      if (column.hidden) {
+        td += 'display: none;';
+      }
+
+      // keep cells aligned as their column headers are aligned
+      if (column.textAlign) {
+        td += 'text-align: ' + column.textAlign + ';';
+      }
+
+      td += '"';
+    }
+
+    return td + '>' + html + '</td>';
+  };
+
+  function defaultAttributeWriter(record) {
+    // `this` is the column object in settings.columns
+    // TODO: automatically convert common types, such as arrays and objects, to string
+    return record[this.id];
+  };
+
+  function defaultAttributeReader(cell, record) {
+    return $(cell).html();
+  };
+
+  //-----------------------------------------------------------------
+  // Dynatable object model prototype
+  // (all object models get these default functions)
+  //-----------------------------------------------------------------
+
+  Model = {
+    initOnLoad: function() {
       return true;
-    }
+    },
 
-    return _isFixed(p);
+    init: function() {}
   };
 
-  /**
-   * Provides a cross-browser way to get the screen dimensions
-   * via: http://stackoverflow.com/questions/5864467/internet-explorer-innerheight
-   *
-   * @api private
-   * @method _getWinSize
-   * @returns {Object} width and height attributes
-   */
-  function _getWinSize() {
-    if (window.innerWidth != undefined) {
-      return { width: window.innerWidth, height: window.innerHeight };
-    } else {
-      var D = document.documentElement;
-      return { width: D.clientWidth, height: D.clientHeight };
+  for (model in modelPrototypes) {
+    if (modelPrototypes.hasOwnProperty(model)) {
+      var modelPrototype = modelPrototypes[model];
+      modelPrototype.prototype = Model;
     }
   }
 
-  /**
-   * Add overlay layer to the page
-   * http://stackoverflow.com/questions/123999/how-to-tell-if-a-dom-element-is-visible-in-the-current-viewport
-   *
-   * @api private
-   * @method _elementInViewport
-   * @param {Object} el
-   */
-  function _elementInViewport(el) {
-    var rect = el.getBoundingClientRect();
+  //-----------------------------------------------------------------
+  // Dynatable object models
+  //-----------------------------------------------------------------
 
-    return (
-      rect.top >= 0 &&
-      rect.left >= 0 &&
-      (rect.bottom+80) <= window.innerHeight && // add 80 to get the text right
-      rect.right <= window.innerWidth
-    );
-  }
+  function Dom(obj, settings) {
+    var _this = this;
 
-  /**
-   * Add overlay layer to the page
-   *
-   * @api private
-   * @method _addOverlayLayer
-   * @param {Object} targetElm
-   */
-  function _addOverlayLayer(targetElm) {
-    var overlayLayer = document.createElement('div'),
-        styleText = '',
-        self = this;
+    // update table contents with new records array
+    // from query (whether ajax or not)
+    this.update = function() {
+      var rows = '',
+          columns = settings.table.columns,
+          rowWriter = settings.writers._rowWriter,
+          cellWriter = settings.writers._cellWriter;
 
-    //set css class name
-    overlayLayer.className = 'introjs-overlay';
+      obj.$element.trigger('dynatable:beforeUpdate', rows);
 
-    //check if the target element is body, we should calculate the size of overlay layer in a better way
-    if (targetElm.tagName.toLowerCase() === 'body') {
-      styleText += 'top: 0;bottom: 0; left: 0;right: 0;position: fixed;';
-      overlayLayer.setAttribute('style', styleText);
-    } else {
-      //set overlay layer position
-      var elementPosition = _getOffset(targetElm);
-      if (elementPosition) {
-        styleText += 'width: ' + elementPosition.width + 'px; height:' + elementPosition.height + 'px; top:' + elementPosition.top + 'px;left: ' + elementPosition.left + 'px;';
-        overlayLayer.setAttribute('style', styleText);
+      // loop through records
+      for (var i = 0, len = settings.dataset.records.length; i < len; i++) {
+        var record = settings.dataset.records[i],
+            tr = rowWriter(i, record, columns, cellWriter);
+        rows += tr;
       }
-    }
 
-    targetElm.appendChild(overlayLayer);
-
-    overlayLayer.onclick = function() {
-      if (self._options.exitOnOverlayClick == true) {
-
-        //check if any callback is defined
-        if (self._introExitCallback != undefined) {
-          self._introExitCallback.call(self);
-        }
-        _exitIntro.call(self, targetElm);
+      // Appended dynatable interactive elements
+      if (settings.features.recordCount) {
+        $('#dynatable-record-count-' + obj.element.id).replaceWith(obj.recordsCount.create());
       }
-    };
-
-    setTimeout(function() {
-      styleText += 'opacity: ' + self._options.overlayOpacity.toString() + ';';
-      overlayLayer.setAttribute('style', styleText);
-    }, 10);
-
-    return true;
-  };
-
-  /**
-   * Removes open hint (tooltip hint)
-   *
-   * @api private
-   * @method _removeHintTooltip
-   */
-  function _removeHintTooltip() {
-    var tooltip = this._targetElement.querySelector('.introjs-hintReference');
-
-
-    if (tooltip) {
-      var step = tooltip.getAttribute('data-step');
-      tooltip.parentNode.removeChild(tooltip);
-      return step;
-    }
-  };
-
-  /**
-   * Start parsing hint items
-   *
-   * @api private
-   * @param {Object} targetElm
-   * @method _startHint
-   */
-  function _populateHints(targetElm) {
-    var self = this;
-    this._introItems = []
-
-    if (this._options.hints) {
-      for (var i = 0, l = this._options.hints.length; i < l; i++) {
-        var currentItem = _cloneObject(this._options.hints[i]);
-
-        if (typeof(currentItem.element) === 'string') {
-          //grab the element with given selector from the page
-          currentItem.element = document.querySelector(currentItem.element);
-        }
-
-        currentItem.hintPosition = currentItem.hintPosition || 'top-middle';
-
-        if (currentItem.element != null) {
-          this._introItems.push(currentItem);
+      if (settings.features.paginate) {
+        $('#dynatable-pagination-links-' + obj.element.id).replaceWith(obj.paginationLinks.create());
+        if (settings.features.perPageSelect) {
+          $('#dynatable-per-page-' + obj.element.id).val(parseInt(settings.dataset.perPage));
         }
       }
-    } else {
-      var hints = targetElm.querySelectorAll('*[data-hint]');
 
-      if (hints.length < 1) {
-        return false;
+      // Sort headers functionality
+      if (settings.features.sort && columns) {
+        obj.sortsHeaders.removeAllArrows();
+        for (var i = 0, len = columns.length; i < len; i++) {
+          var column = columns[i],
+              sortedByColumn = utility.allMatch(settings.dataset.sorts, column.sorts, function(sorts, sort) { return sort in sorts; }),
+              value = settings.dataset.sorts[column.sorts[0]];
+
+          if (sortedByColumn) {
+            obj.$element.find('[data-dynatable-column="' + column.id + '"]').find('.dynatable-sort-header').each(function(){
+              if (value == 1) {
+                obj.sortsHeaders.appendArrowUp($(this));
+              } else {
+                obj.sortsHeaders.appendArrowDown($(this));
+              }
+            });
+          }
+        }
       }
 
-      //first add intro items with data-step
-      for (var i = 0, l = hints.length; i < l; i++) {
-        var currentElement = hints[i];
+      // Query search functionality
+      if (settings.inputs.queries || settings.features.search) {
+        var allQueries = settings.inputs.queries || $();
+        if (settings.features.search) {
+          allQueries = allQueries.add('#dynatable-query-search-' + obj.element.id);
+        }
 
-        this._introItems.push({
-          element: currentElement,
-          hint: currentElement.getAttribute('data-hint'),
-          hintPosition: currentElement.getAttribute('data-hintPosition') || this._options.hintPosition,
-          tooltipClass: currentElement.getAttribute('data-tooltipClass'),
-          position: currentElement.getAttribute('data-position') || this._options.tooltipPosition
+        allQueries.each(function() {
+          var $this = $(this),
+              q = settings.dataset.queries[$this.data('dynatable-query')];
+          $this.val(q || '');
         });
       }
-    }
 
-    _addHints.call(this);
+      obj.$element.find(settings.table.bodyRowSelector).remove();
+      obj.$element.append(rows);
 
-    if (document.addEventListener) {
-      document.addEventListener('click', _removeHintTooltip.bind(this), false);
-      //for window resize
-      window.addEventListener('resize', _reAlignHints.bind(this), true);
-    } else if (document.attachEvent) { //IE
-      //for window resize
-      document.attachEvent('onclick', _removeHintTooltip.bind(this));
-      document.attachEvent('onresize', _reAlignHints.bind(this));
-    }
+      obj.$element.trigger('dynatable:afterUpdate', rows);
+    };
   };
 
-  /**
-   * Re-aligns all hint elements
-   *
-   * @api private
-   * @method _reAlignHints
-   */
-  function _reAlignHints() {
-    for (var i = 0, l = this._introItems.length; i < l; i++) {
-      var item = this._introItems[i];
-      _alignHintPosition.call(this, item.hintPosition, item.element, item.targetElement)
-    }
-  }
+  function DomColumns(obj, settings) {
+    var _this = this;
 
-  /**
-   * Hide a hint
-   *
-   * @api private
-   * @method _hideHint
-   */
-  function _hideHint(stepId) {
-    _removeHintTooltip.call(this);
-    var hint = this._targetElement.querySelector('.introjs-hint[data-step="' + stepId + '"]');
+    this.initOnLoad = function() {
+      return obj.$element.is('table');
+    };
 
-    if (hint) {
-      hint.className += ' introjs-hidehint';
-    }
+    this.init = function() {
+      settings.table.columns = [];
+      this.getFromTable();
+    };
 
-    // call the callback function (if any)
-    if (typeof (this._hintCloseCallback) !== 'undefined') {
-      this._hintCloseCallback.call(this, stepId);
-    }
-  };
-
-  /**
-   * Add all available hints to the page
-   *
-   * @api private
-   * @method _addHints
-   */
-  function _addHints() {
-    var self = this;
-
-    var oldHintsWrapper = document.querySelector('.introjs-hints');
-
-    if (oldHintsWrapper != null) {
-      hintsWrapper = oldHintsWrapper;
-    } else {
-      var hintsWrapper = document.createElement('div');
-      hintsWrapper.className = 'introjs-hints';
-    }
-
-    for (var i = 0, l = this._introItems.length; i < l; i++) {
-      var item = this._introItems[i];
-
-      // avoid append a hint twice
-      if (document.querySelector('.introjs-hint[data-step="' + i + '"]'))
-        continue;
-
-      var hint = document.createElement('a');
-      hint.href = "javascript:void(0);";
-
-      (function (hint, item, i) {
-        // when user clicks on the hint element
-        hint.onclick = function(e) {
-          var evt = e ? e : window.event;
-          if (evt.stopPropagation)    evt.stopPropagation();
-          if (evt.cancelBubble != null) evt.cancelBubble = true;
-
-          _hintClick.call(self, hint, item, i);
-        };
-      }(hint, item, i));
-
-      hint.className = 'introjs-hint';
-
-      // hint's position should be fixed if the target element's position is fixed
-      if (_isFixed(item.element)) {
-        hint.className += ' introjs-fixedhint';
-      }
-
-      var hintDot = document.createElement('div');
-      hintDot.className = 'introjs-hint-dot';
-      var hintPulse = document.createElement('div');
-      hintPulse.className = 'introjs-hint-pulse';
-
-      hint.appendChild(hintDot);
-      hint.appendChild(hintPulse);
-      hint.setAttribute('data-step', i);
-
-      // we swap the hint element with target element
-      // because _setHelperLayerPosition uses `element` property
-      item.targetElement = item.element;
-      item.element = hint;
-
-      // align the hint position
-      _alignHintPosition.call(this, item.hintPosition, hint, item.targetElement);
-
-      hintsWrapper.appendChild(hint);
-    }
-
-    // adding the hints wrapper
-    document.body.appendChild(hintsWrapper);
-
-    // call the callback function (if any)
-    if (typeof (this._hintsAddedCallback) !== 'undefined') {
-      this._hintsAddedCallback.call(this);
-    }
-  };
-
-  /**
-   * Aligns hint position
-   *
-   * @api private
-   * @method _alignHintPosition
-   * @param {String} position
-   * @param {Object} hint
-   * @param {Object} element
-   */
-  function _alignHintPosition(position, hint, element) {
-    // get/calculate offset of target element
-    var offset = _getOffset.call(this, element);
-
-    // align the hint element
-    switch (position) {
-      default:
-      case 'top-left':
-        hint.style.left = offset.left + 'px';
-        hint.style.top = offset.top + 'px';
-        break;
-      case 'top-right':
-        hint.style.left = (offset.left + offset.width) + 'px';
-        hint.style.top = offset.top + 'px';
-        break;
-      case 'bottom-left':
-        hint.style.left = offset.left + 'px';
-        hint.style.top = (offset.top + offset.height) + 'px';
-        break;
-      case 'bottom-right':
-        hint.style.left = (offset.left + offset.width) + 'px';
-        hint.style.top = (offset.top + offset.height) + 'px';
-        break;
-      case 'bottom-middle':
-        hint.style.left = (offset.left + (offset.width / 2)) + 'px';
-        hint.style.top = (offset.top + offset.height) + 'px';
-        break;
-      case 'top-middle':
-        hint.style.left = (offset.left + (offset.width / 2)) + 'px';
-        hint.style.top = offset.top + 'px';
-        break;
-    }
-  };
-
-  /**
-   * Triggers when user clicks on the hint element
-   *
-   * @api private
-   * @method _hintClick
-   * @param {Object} hintElement
-   * @param {Object} item
-   * @param {Number} stepId
-   */
-  function _hintClick(hintElement, item, stepId) {
-    // call the callback function (if any)
-    if (typeof (this._hintClickCallback) !== 'undefined') {
-      this._hintClickCallback.call(this, hintElement, item, stepId);
-    }
-
-    // remove all open tooltips
-    var removedStep = _removeHintTooltip.call(this);
-
-    // to toggle the tooltip
-    if (parseInt(removedStep, 10) == stepId) {
-      return;
-    }
-
-    var tooltipLayer = document.createElement('div');
-    var tooltipTextLayer = document.createElement('div');
-    var arrowLayer = document.createElement('div');
-    var referenceLayer = document.createElement('div');
-
-    tooltipLayer.className = 'introjs-tooltip';
-
-    tooltipLayer.onclick = function (e) {
-      //IE9 & Other Browsers
-      if (e.stopPropagation) {
-        e.stopPropagation();
-      }
-      //IE8 and Lower
-      else {
-        e.cancelBubble = true;
+    // initialize table[columns] array
+    this.getFromTable = function() {
+      var $columns = obj.$element.find(settings.table.headRowSelector).children('th,td');
+      if ($columns.length) {
+        $columns.each(function(index){
+          _this.add($(this), index, true);
+        });
+      } else {
+        return $.error("Couldn't find any columns headers in '" + settings.table.headRowSelector + " th,td'. If your header row is different, specify the selector in the table: headRowSelector option.");
       }
     };
 
-    tooltipTextLayer.className = 'introjs-tooltiptext';
+    this.add = function($column, position, skipAppend, skipUpdate) {
+      var columns = settings.table.columns,
+          label = $column.text(),
+          id = $column.data('dynatable-column') || utility.normalizeText(label, settings.table.defaultColumnIdStyle),
+          dataSorts = $column.data('dynatable-sorts'),
+          sorts = dataSorts ? $.map(dataSorts.split(','), function(text) { return $.trim(text); }) : [id];
 
-    var tooltipWrapper = document.createElement('p');
-    tooltipWrapper.innerHTML = item.hint;
+      // If the column id is blank, generate an id for it
+      if ( !id ) {
+        this.generate($column);
+        id = $column.data('dynatable-column');
+      }
+      // Add column data to plugin instance
+      columns.splice(position, 0, {
+        index: position,
+        label: label,
+        id: id,
+        attributeWriter: settings.writers[id] || settings.writers._attributeWriter,
+        attributeReader: settings.readers[id] || settings.readers._attributeReader,
+        sorts: sorts,
+        hidden: $column.css('display') === 'none',
+        textAlign: $column.css('text-align')
+      });
 
-    var closeButton = document.createElement('a');
-    closeButton.className = 'introjs-button';
-    closeButton.innerHTML = this._options.hintButtonLabel;
-    closeButton.onclick = _hideHint.bind(this, stepId);
+      // Modify header cell
+      $column
+        .attr('data-dynatable-column', id)
+        .addClass('dynatable-head');
+      if (settings.table.headRowClass) { $column.addClass(settings.table.headRowClass); }
 
-    tooltipTextLayer.appendChild(tooltipWrapper);
-    tooltipTextLayer.appendChild(closeButton);
+      // Append column header to table
+      if (!skipAppend) {
+        var domPosition = position + 1,
+            $sibling = obj.$element.find(settings.table.headRowSelector)
+              .children('th:nth-child(' + domPosition + '),td:nth-child(' + domPosition + ')').first(),
+            columnsAfter = columns.slice(position + 1, columns.length);
 
-    arrowLayer.className = 'introjs-arrow';
-    tooltipLayer.appendChild(arrowLayer);
+        if ($sibling.length) {
+          $sibling.before($column);
+        // sibling column doesn't yet exist (maybe this is the last column in the header row)
+        } else {
+          obj.$element.find(settings.table.headRowSelector).append($column);
+        }
 
-    tooltipLayer.appendChild(tooltipTextLayer);
+        obj.sortsHeaders.attachOne($column.get());
 
-    // set current step for _placeTooltip function
-    this._currentStep = hintElement.getAttribute('data-step');
+        // increment the index of all columns after this one that was just inserted
+        if (columnsAfter.length) {
+          for (var i = 0, len = columnsAfter.length; i < len; i++) {
+            columnsAfter[i].index += 1;
+          }
+        }
 
-    // align reference layer position
-    referenceLayer.className = 'introjs-tooltipReferenceLayer introjs-hintReference';
-    referenceLayer.setAttribute('data-step', hintElement.getAttribute('data-step'));
-    _setHelperLayerPosition.call(this, referenceLayer);
+        if (!skipUpdate) {
+          obj.dom.update();
+        }
+      }
 
-    referenceLayer.appendChild(tooltipLayer);
-    document.body.appendChild(referenceLayer);
+      return dt;
+    };
 
-    //set proper position
-    _placeTooltip.call(this, hintElement, tooltipLayer, arrowLayer, null, true);
+    this.remove = function(columnIndexOrId) {
+      var columns = settings.table.columns,
+          length = columns.length;
+
+      if (typeof(columnIndexOrId) === "number") {
+        var column = columns[columnIndexOrId];
+        this.removeFromTable(column.id);
+        this.removeFromArray(columnIndexOrId);
+      } else {
+        // Traverse columns array in reverse order so that subsequent indices
+        // don't get messed up when we delete an item from the array in an iteration
+        for (var i = columns.length - 1; i >= 0; i--) {
+          var column = columns[i];
+
+          if (column.id === columnIndexOrId) {
+            this.removeFromTable(columnIndexOrId);
+            this.removeFromArray(i);
+          }
+        }
+      }
+
+      obj.dom.update();
+    };
+
+    this.removeFromTable = function(columnId) {
+      obj.$element.find(settings.table.headRowSelector).children('[data-dynatable-column="' + columnId + '"]').first()
+        .remove();
+    };
+
+    this.removeFromArray = function(index) {
+      var columns = settings.table.columns,
+          adjustColumns;
+      columns.splice(index, 1);
+      adjustColumns = columns.slice(index, columns.length);
+      for (var i = 0, len = adjustColumns.length; i < len; i++) {
+        adjustColumns[i].index -= 1;
+      }
+    };
+
+    this.generate = function($cell) {
+      var cell = $cell === undefined ? $('<th></th>') : $cell;
+      return this.attachGeneratedAttributes(cell);
+    };
+
+    this.attachGeneratedAttributes = function($cell) {
+      // Use increment to create unique column name that is the same each time the page is reloaded,
+      // in order to avoid errors with mismatched attribute names when loading cached `dataset.records` array
+      var increment = obj.$element.find(settings.table.headRowSelector).children('th[data-dynatable-generated]').length;
+      return $cell
+        .attr('data-dynatable-column', 'dynatable-generated-' + increment) //+ utility.randomHash(),
+        .attr('data-dynatable-no-sort', 'true')
+        .attr('data-dynatable-generated', increment);
+    };
   };
 
-  /**
-   * Get an element position on the page
-   * Thanks to `meouw`: http://stackoverflow.com/a/442474/375966
-   *
-   * @api private
-   * @method _getOffset
-   * @param {Object} element
-   * @returns Element's position info
-   */
-  function _getOffset(element) {
-    var elementPosition = {};
+  function Records(obj, settings) {
+    var _this = this;
 
-    //set width
-    elementPosition.width = element.offsetWidth;
+    this.initOnLoad = function() {
+      return !settings.dataset.ajax;
+    };
 
-    //set height
-    elementPosition.height = element.offsetHeight;
+    this.init = function() {
+      if (settings.dataset.records === null) {
+        settings.dataset.records = this.getFromTable();
 
-    //calculate element top and left
-    var _x = 0;
-    var _y = 0;
-    while (element && !isNaN(element.offsetLeft) && !isNaN(element.offsetTop)) {
-      _x += element.offsetLeft;
-      _y += element.offsetTop;
-      element = element.offsetParent;
+        if (!settings.dataset.queryRecordCount) {
+          settings.dataset.queryRecordCount = this.count();
+        }
+
+        if (!settings.dataset.totalRecordCount){
+          settings.dataset.totalRecordCount = settings.dataset.queryRecordCount;
+        }
+      }
+
+      // Create cache of original full recordset (unpaginated and unqueried)
+      settings.dataset.originalRecords = $.extend(true, [], settings.dataset.records);
+    };
+
+    // merge ajax response json with cached data including
+    // meta-data and records
+    this.updateFromJson = function(data) {
+      var records;
+      if (settings.params.records === "_root") {
+        records = data;
+      } else if (settings.params.records in data) {
+        records = data[settings.params.records];
+      }
+      if (settings.params.record) {
+        var len = records.length - 1;
+        for (var i = 0; i < len; i++) {
+          records[i] = records[i][settings.params.record];
+        }
+      }
+      if (settings.params.queryRecordCount in data) {
+        settings.dataset.queryRecordCount = data[settings.params.queryRecordCount];
+      }
+      if (settings.params.totalRecordCount in data) {
+        settings.dataset.totalRecordCount = data[settings.params.totalRecordCount];
+      }
+      settings.dataset.records = records;
+    };
+
+    // For really advanced sorting,
+    // see http://james.padolsey.com/javascript/sorting-elements-with-jquery/
+    this.sort = function() {
+      var sort = [].sort,
+          sorts = settings.dataset.sorts,
+          sortsKeys = settings.dataset.sortsKeys,
+          sortTypes = settings.dataset.sortTypes;
+
+      var sortFunction = function(a, b) {
+        var comparison;
+        if ($.isEmptyObject(sorts)) {
+          comparison = obj.sorts.functions['originalPlacement'](a, b);
+        } else {
+          for (var i = 0, len = sortsKeys.length; i < len; i++) {
+            var attr = sortsKeys[i],
+                direction = sorts[attr],
+                sortType = sortTypes[attr] || obj.sorts.guessType(a, b, attr);
+            comparison = obj.sorts.functions[sortType](a, b, attr, direction);
+            // Don't need to sort any further unless this sort is a tie between a and b,
+            // so break the for loop unless tied
+            if (comparison !== 0) { break; }
+          }
+        }
+        return comparison;
+      }
+
+      return sort.call(settings.dataset.records, sortFunction);
+    };
+
+    this.paginate = function() {
+      var bounds = this.pageBounds(),
+          first = bounds[0], last = bounds[1];
+      settings.dataset.records = settings.dataset.records.slice(first, last);
+    };
+
+    this.resetOriginal = function() {
+      settings.dataset.records = settings.dataset.originalRecords || [];
+    };
+
+    this.pageBounds = function() {
+      var page = settings.dataset.page || 1,
+          first = (page - 1) * settings.dataset.perPage,
+          last = Math.min(first + settings.dataset.perPage, settings.dataset.queryRecordCount);
+      return [first,last];
+    };
+
+    // get initial recordset to populate table
+    // if ajax, call ajaxUrl
+    // otherwise, initialize from in-table records
+    this.getFromTable = function() {
+      var records = [],
+          columns = settings.table.columns,
+          tableRecords = obj.$element.find(settings.table.bodyRowSelector);
+
+      tableRecords.each(function(index){
+        var record = {};
+        record['dynatable-original-index'] = index;
+        $(this).find('th,td').each(function(index) {
+          if (columns[index] === undefined) {
+            // Header cell didn't exist for this column, so let's generate and append
+            // a new header cell with a randomly generated name (so we can store and
+            // retrieve the contents of this column for each record)
+            obj.domColumns.add(obj.domColumns.generate(), columns.length, false, true); // don't skipAppend, do skipUpdate
+          }
+          var value = columns[index].attributeReader(this, record),
+              attr = columns[index].id;
+
+          // If value from table is HTML, let's get and cache the text equivalent for
+          // the default string sorting, since it rarely makes sense for sort headers
+          // to sort based on HTML tags.
+          if (typeof(value) === "string" && value.match(/\s*\<.+\>/)) {
+            if (! record['dynatable-sortable-text']) {
+              record['dynatable-sortable-text'] = {};
+            }
+            record['dynatable-sortable-text'][attr] = $.trim($('<div></div>').html(value).text());
+          }
+
+          record[attr] = value;
+        });
+        // Allow configuration function which alters record based on attributes of
+        // table row (e.g. from html5 data- attributes)
+        if (typeof(settings.readers._rowReader) === "function") {
+          settings.readers._rowReader(index, this, record);
+        }
+        records.push(record);
+      });
+      return records; // 1st row is header
+    };
+
+    // count records from table
+    this.count = function() {
+      return settings.dataset.records.length;
+    };
+  };
+
+  function RecordsCount(obj, settings) {
+    this.initOnLoad = function() {
+      return settings.features.recordCount;
+    };
+
+    this.init = function() {
+      this.attach();
+    };
+
+    this.create = function() {
+      var recordsShown = obj.records.count(),
+          recordsQueryCount = settings.dataset.queryRecordCount,
+          recordsTotal = settings.dataset.totalRecordCount,
+          text = settings.inputs.recordCountText,
+          collection_name = settings.params.records;
+
+      if (recordsShown < recordsQueryCount && settings.features.paginate) {
+        var bounds = obj.records.pageBounds();
+        text += "<span class='dynatable-record-bounds'>" + (bounds[0] + 1) + " to " + bounds[1] + "</span> of ";
+      } else if (recordsShown === recordsQueryCount && settings.features.paginate) {
+        text += recordsShown + " of ";
+      }
+      text += recordsQueryCount + " " + collection_name;
+      if (recordsQueryCount < recordsTotal) {
+        text += " (filtered from " + recordsTotal + " total records)";
+      }
+
+      return $('<span></span>', {
+                id: 'dynatable-record-count-' + obj.element.id,
+                'class': 'dynatable-record-count',
+                html: text
+              });
+    };
+
+    this.attach = function() {
+      var $target = settings.inputs.recordCountTarget ? $(settings.inputs.recordCountTarget) : obj.$element;
+      $target[settings.inputs.recordCountPlacement](this.create());
+    };
+  };
+
+  function ProcessingIndicator(obj, settings) {
+    this.init = function() {
+      this.attach();
+    };
+
+    this.create = function() {
+      var $processing = $('<div></div>', {
+            html: '<span>' + settings.inputs.processingText + '</span>',
+            id: 'dynatable-processing-' + obj.element.id,
+            'class': 'dynatable-processing',
+            style: 'position: absolute; display: none;'
+          });
+
+      return $processing;
+    };
+
+    this.position = function() {
+      var $processing = $('#dynatable-processing-' + obj.element.id),
+          $span = $processing.children('span'),
+          spanHeight = $span.outerHeight(),
+          spanWidth = $span.outerWidth(),
+          $covered = obj.$element,
+          offset = $covered.offset(),
+          height = $covered.outerHeight(), width = $covered.outerWidth();
+
+      $processing
+        .offset({left: offset.left, top: offset.top})
+        .width(width)
+        .height(height)
+      $span
+        .offset({left: offset.left + ( (width - spanWidth) / 2 ), top: offset.top + ( (height - spanHeight) / 2 )});
+
+      return $processing;
+    };
+
+    this.attach = function() {
+      obj.$element.before(this.create());
+    };
+
+    this.show = function() {
+      $('#dynatable-processing-' + obj.element.id).show();
+      this.position();
+    };
+
+    this.hide = function() {
+      $('#dynatable-processing-' + obj.element.id).hide();
+    };
+  };
+
+  function State(obj, settings) {
+    this.initOnLoad = function() {
+      // Check if pushState option is true, and if browser supports it
+      return settings.features.pushState && history.pushState;
+    };
+
+    this.init = function() {
+      window.onpopstate = function(event) {
+        if (event.state && event.state.dynatable) {
+          obj.state.pop(event);
+        }
+      }
+    };
+
+    this.push = function(data) {
+      var urlString = window.location.search,
+          urlOptions,
+          path,
+          params,
+          hash,
+          newParams,
+          cacheStr,
+          cache,
+          // replaceState on initial load, then pushState after that
+          firstPush = !(window.history.state && window.history.state.dynatable),
+          pushFunction = firstPush ? 'replaceState' : 'pushState';
+
+      if (urlString && /^\?/.test(urlString)) { urlString = urlString.substring(1); }
+      $.extend(urlOptions, data);
+
+      params = utility.refreshQueryString(urlString, data, settings);
+      if (params) { params = '?' + params; }
+      hash = window.location.hash;
+      path = window.location.pathname;
+
+      obj.$element.trigger('dynatable:push', data);
+
+      cache = { dynatable: { dataset: settings.dataset } };
+      if (!firstPush) { cache.dynatable.scrollTop = $(window).scrollTop(); }
+      cacheStr = JSON.stringify(cache);
+
+      // Mozilla has a 640k char limit on what can be stored in pushState.
+      // See "limit" in https://developer.mozilla.org/en/DOM/Manipulating_the_browser_history#The_pushState().C2.A0method
+      // and "dataStr.length" in http://wine.git.sourceforge.net/git/gitweb.cgi?p=wine/wine-gecko;a=patch;h=43a11bdddc5fc1ff102278a120be66a7b90afe28
+      //
+      // Likewise, other browsers may have varying (undocumented) limits.
+      // Also, Firefox's limit can be changed in about:config as browser.history.maxStateObjectSize
+      // Since we don't know what the actual limit will be in any given situation, we'll just try caching and rescue
+      // any exceptions by retrying pushState without caching the records.
+      //
+      // I have absolutely no idea why perPageOptions suddenly becomes an array-like object instead of an array,
+      // but just recently, this started throwing an error if I don't convert it:
+      // 'Uncaught Error: DATA_CLONE_ERR: DOM Exception 25'
+      cache.dynatable.dataset.perPageOptions = $.makeArray(cache.dynatable.dataset.perPageOptions);
+
+      try {
+        window.history[pushFunction](cache, "Dynatable state", path + params + hash);
+      } catch(error) {
+        // Make cached records = null, so that `pop` will rerun process to retrieve records
+        cache.dynatable.dataset.records = null;
+        window.history[pushFunction](cache, "Dynatable state", path + params + hash);
+      }
+    };
+
+    this.pop = function(event) {
+      var data = event.state.dynatable;
+      settings.dataset = data.dataset;
+
+      if (data.scrollTop) { $(window).scrollTop(data.scrollTop); }
+
+      // If dataset.records is cached from pushState
+      if ( data.dataset.records ) {
+        obj.dom.update();
+      } else {
+        obj.process(true);
+      }
+    };
+  };
+
+  function Sorts(obj, settings) {
+    this.initOnLoad = function() {
+      return settings.features.sort;
+    };
+
+    this.init = function() {
+      var sortsUrl = window.location.search.match(new RegExp(settings.params.sorts + '[^&=]*=[^&]*', 'g'));
+      settings.dataset.sorts = sortsUrl ? utility.deserialize(sortsUrl)[settings.params.sorts] : {};
+      settings.dataset.sortsKeys = sortsUrl ? utility.keysFromObject(settings.dataset.sorts) : [];
+    };
+
+    this.add = function(attr, direction) {
+      var sortsKeys = settings.dataset.sortsKeys,
+          index = $.inArray(attr, sortsKeys);
+      settings.dataset.sorts[attr] = direction;
+      if (index === -1) { sortsKeys.push(attr); }
+      return dt;
+    };
+
+    this.remove = function(attr) {
+      var sortsKeys = settings.dataset.sortsKeys,
+          index = $.inArray(attr, sortsKeys);
+      delete settings.dataset.sorts[attr];
+      if (index !== -1) { sortsKeys.splice(index, 1); }
+      return dt;
+    };
+
+    this.clear = function() {
+      settings.dataset.sorts = {};
+      settings.dataset.sortsKeys.length = 0;
+    };
+
+    // Try to intelligently guess which sort function to use
+    // based on the type of attribute values.
+    // Consider using something more robust than `typeof` (http://javascriptweblog.wordpress.com/2011/08/08/fixing-the-javascript-typeof-operator/)
+    this.guessType = function(a, b, attr) {
+      var types = {
+            string: 'string',
+            number: 'number',
+            'boolean': 'number',
+            object: 'number' // dates and null values are also objects, this works...
+          },
+          attrType = a[attr] ? typeof(a[attr]) : typeof(b[attr]),
+          type = types[attrType] || 'number';
+      return type;
+    };
+
+    // Built-in sort functions
+    // (the most common use-cases I could think of)
+    this.functions = {
+      number: function(a, b, attr, direction) {
+        return a[attr] === b[attr] ? 0 : (direction > 0 ? a[attr] - b[attr] : b[attr] - a[attr]);
+      },
+      string: function(a, b, attr, direction) {
+        var aAttr = (a['dynatable-sortable-text'] && a['dynatable-sortable-text'][attr]) ? a['dynatable-sortable-text'][attr] : a[attr],
+            bAttr = (b['dynatable-sortable-text'] && b['dynatable-sortable-text'][attr]) ? b['dynatable-sortable-text'][attr] : b[attr],
+            comparison;
+        aAttr = aAttr.toLowerCase();
+        bAttr = bAttr.toLowerCase();
+        comparison = aAttr === bAttr ? 0 : (direction > 0 ? aAttr > bAttr : bAttr > aAttr);
+        // force false boolean value to -1, true to 1, and tie to 0
+        return comparison === false ? -1 : (comparison - 0);
+      },
+      originalPlacement: function(a, b) {
+        return a['dynatable-original-index'] - b['dynatable-original-index'];
+      }
+    };
+  };
+
+  // turn table headers into links which add sort to sorts array
+  function SortsHeaders(obj, settings) {
+    var _this = this;
+
+    this.initOnLoad = function() {
+      return settings.features.sort;
+    };
+
+    this.init = function() {
+      this.attach();
+    };
+
+    this.create = function(cell) {
+      var $cell = $(cell),
+          $link = $('<a></a>', {
+            'class': 'dynatable-sort-header',
+            href: '#',
+            html: $cell.html()
+          }),
+          id = $cell.data('dynatable-column'),
+          column = utility.findObjectInArray(settings.table.columns, {id: id});
+
+      $link.bind('click', function(e) {
+        _this.toggleSort(e, $link, column);
+        obj.process();
+
+        e.preventDefault();
+      });
+
+      if (this.sortedByColumn($link, column)) {
+        if (this.sortedByColumnValue(column) == 1) {
+          this.appendArrowUp($link);
+        } else {
+          this.appendArrowDown($link);
+        }
+      }
+
+      return $link;
+    };
+
+    this.removeAll = function() {
+      obj.$element.find(settings.table.headRowSelector).children('th,td').each(function(){
+        _this.removeAllArrows();
+        _this.removeOne(this);
+      });
+    };
+
+    this.removeOne = function(cell) {
+      var $cell = $(cell),
+          $link = $cell.find('.dynatable-sort-header');
+      if ($link.length) {
+        var html = $link.html();
+        $link.remove();
+        $cell.html($cell.html() + html);
+      }
+    };
+
+    this.attach = function() {
+      obj.$element.find(settings.table.headRowSelector).children('th,td').each(function(){
+        _this.attachOne(this);
+      });
+    };
+
+    this.attachOne = function(cell) {
+      var $cell = $(cell);
+      if (!$cell.data('dynatable-no-sort')) {
+        $cell.html(this.create(cell));
+      }
+    };
+
+    this.appendArrowUp = function($link) {
+      this.removeArrow($link);
+      $link.append("<span class='dynatable-arrow'> &#9650;</span>");
+    };
+
+    this.appendArrowDown = function($link) {
+      this.removeArrow($link);
+      $link.append("<span class='dynatable-arrow'> &#9660;</span>");
+    };
+
+    this.removeArrow = function($link) {
+      // Not sure why `parent()` is needed, the arrow should be inside the link from `append()` above
+      $link.find('.dynatable-arrow').remove();
+    };
+
+    this.removeAllArrows = function() {
+      obj.$element.find('.dynatable-arrow').remove();
+    };
+
+    this.toggleSort = function(e, $link, column) {
+      var sortedByColumn = this.sortedByColumn($link, column),
+          value = this.sortedByColumnValue(column);
+      // Clear existing sorts unless this is a multisort event
+      if (!settings.inputs.multisort || !utility.anyMatch(e, settings.inputs.multisort, function(evt, key) { return e[key]; })) {
+        this.removeAllArrows();
+        obj.sorts.clear();
+      }
+
+      // If sorts for this column are already set
+      if (sortedByColumn) {
+        // If ascending, then make descending
+        if (value == 1) {
+          for (var i = 0, len = column.sorts.length; i < len; i++) {
+            obj.sorts.add(column.sorts[i], -1);
+          }
+          this.appendArrowDown($link);
+        // If descending, remove sort
+        } else {
+          for (var i = 0, len = column.sorts.length; i < len; i++) {
+            obj.sorts.remove(column.sorts[i]);
+          }
+          this.removeArrow($link);
+        }
+      // Otherwise, if not already set, set to ascending
+      } else {
+        for (var i = 0, len = column.sorts.length; i < len; i++) {
+          obj.sorts.add(column.sorts[i], 1);
+        }
+        this.appendArrowUp($link);
+      }
+    };
+
+    this.sortedByColumn = function($link, column) {
+      return utility.allMatch(settings.dataset.sorts, column.sorts, function(sorts, sort) { return sort in sorts; });
+    };
+
+    this.sortedByColumnValue = function(column) {
+      return settings.dataset.sorts[column.sorts[0]];
+    };
+  };
+
+  function Queries(obj, settings) {
+    var _this = this;
+
+    this.initOnLoad = function() {
+      return settings.inputs.queries || settings.features.search;
+    };
+
+    this.init = function() {
+      var queriesUrl = window.location.search.match(new RegExp(settings.params.queries + '[^&=]*=[^&]*', 'g'));
+
+      settings.dataset.queries = queriesUrl ? utility.deserialize(queriesUrl)[settings.params.queries] : {};
+      if (settings.dataset.queries === "") { settings.dataset.queries = {}; }
+
+      if (settings.inputs.queries) {
+        this.setupInputs();
+      }
+    };
+
+    this.add = function(name, value) {
+      // reset to first page since query will change records
+      if (settings.features.paginate) {
+        settings.dataset.page = 1;
+      }
+      settings.dataset.queries[name] = value;
+      return dt;
+    };
+
+    this.remove = function(name) {
+      delete settings.dataset.queries[name];
+      return dt;
+    };
+
+    this.run = function() {
+      for (query in settings.dataset.queries) {
+        if (settings.dataset.queries.hasOwnProperty(query)) {
+          var value = settings.dataset.queries[query];
+          if (_this.functions[query] === undefined) {
+            // Try to lazily evaluate query from column names if not explicitly defined
+            var queryColumn = utility.findObjectInArray(settings.table.columns, {id: query});
+            if (queryColumn) {
+              _this.functions[query] = function(record, queryValue) {
+                return record[query] == queryValue;
+              };
+            } else {
+              $.error("Query named '" + query + "' called, but not defined in queries.functions");
+              continue; // to skip to next query
+            }
+          }
+          // collect all records that return true for query
+          settings.dataset.records = $.map(settings.dataset.records, function(record) {
+            return _this.functions[query](record, value) ? record : null;
+          });
+        }
+      }
+      settings.dataset.queryRecordCount = obj.records.count();
+    };
+
+    // Shortcut for performing simple query from built-in search
+    this.runSearch = function(q) {
+      var origQueries = $.extend({}, settings.dataset.queries);
+      if (q) {
+        this.add('search', q);
+      } else {
+        this.remove('search');
+      }
+      if (!utility.objectsEqual(settings.dataset.queries, origQueries)) {
+        obj.process();
+      }
+    };
+
+    this.setupInputs = function() {
+      settings.inputs.queries.each(function() {
+        var $this = $(this),
+            event = $this.data('dynatable-query-event') || settings.inputs.queryEvent,
+            query = $this.data('dynatable-query') || $this.attr('name') || this.id,
+            queryFunction = function(e) {
+              var q = $(this).val();
+              if (q === "") { q = undefined; }
+              if (q === settings.dataset.queries[query]) { return false; }
+              if (q) {
+                _this.add(query, q);
+              } else {
+                _this.remove(query);
+              }
+              obj.process();
+              e.preventDefault();
+            };
+
+        $this
+          .attr('data-dynatable-query', query)
+          .bind(event, queryFunction)
+          .bind('keypress', function(e) {
+            if (e.which == 13) {
+              queryFunction.call(this, e);
+            }
+          });
+
+        if (settings.dataset.queries[query]) { $this.val(decodeURIComponent(settings.dataset.queries[query])); }
+      });
+    };
+
+    // Query functions for in-page querying
+    // each function should take a record and a value as input
+    // and output true of false as to whether the record is a match or not
+    this.functions = {
+      search: function(record, queryValue) {
+        var contains = false;
+        // Loop through each attribute of record
+        for (attr in record) {
+          if (record.hasOwnProperty(attr)) {
+            var attrValue = record[attr];
+            if (typeof(attrValue) === "string" && attrValue.toLowerCase().indexOf(queryValue.toLowerCase()) !== -1) {
+              contains = true;
+              // Don't need to keep searching attributes once found
+              break;
+            } else {
+              continue;
+            }
+          }
+        }
+        return contains;
+      }
+    };
+  };
+
+  function InputsSearch(obj, settings) {
+    var _this = this;
+
+    this.initOnLoad = function() {
+      return settings.features.search;
+    };
+
+    this.init = function() {
+      this.attach();
+    };
+
+    this.create = function() {
+      var $search = $('<input />', {
+            type: 'search',
+            id: 'dynatable-query-search-' + obj.element.id,
+            'data-dynatable-query': 'search',
+            value: settings.dataset.queries.search
+          }),
+          $searchSpan = $('<span></span>', {
+            id: 'dynatable-search-' + obj.element.id,
+            'class': 'dynatable-search',
+            text: 'Search: '
+          }).append($search);
+
+      $search
+        .bind(settings.inputs.queryEvent, function() {
+          obj.queries.runSearch($(this).val());
+        })
+        .bind('keypress', function(e) {
+          if (e.which == 13) {
+            obj.queries.runSearch($(this).val());
+            e.preventDefault();
+          }
+        });
+      return $searchSpan;
+    };
+
+    this.attach = function() {
+      var $target = settings.inputs.searchTarget ? $(settings.inputs.searchTarget) : obj.$element;
+      $target[settings.inputs.searchPlacement](this.create());
+    };
+  };
+
+  // provide a public function for selecting page
+  function PaginationPage(obj, settings) {
+    this.initOnLoad = function() {
+      return settings.features.paginate;
+    };
+
+    this.init = function() {
+      var pageUrl = window.location.search.match(new RegExp(settings.params.page + '=([^&]*)'));
+      // If page is present in URL parameters and pushState is enabled
+      // (meaning that it'd be possible for dynatable to have put the
+      // page parameter in the URL)
+      if (pageUrl && settings.features.pushState) {
+        this.set(pageUrl[1]);
+      } else {
+        this.set(1);
+      }
+    };
+
+    this.set = function(page) {
+      settings.dataset.page = parseInt(page, 10);
     }
-    //set top
-    elementPosition.top = _y;
-    //set left
-    elementPosition.left = _x;
-
-    return elementPosition;
   };
 
-  /**
-   * Gets the current progress percentage
-   *
-   * @api private
-   * @method _getProgress
-   * @returns current progress percentage
-   */
-  function _getProgress() {
-    // Steps are 0 indexed
-    var currentStep = parseInt((this._currentStep + 1), 10);
-    return ((currentStep / this._introItems.length) * 100);
-  };
+  function PaginationPerPage(obj, settings) {
+    var _this = this;
 
-  /**
-   * Overwrites obj1's values with obj2's and adds obj2's if non existent in obj1
-   * via: http://stackoverflow.com/questions/171251/how-can-i-merge-properties-of-two-javascript-objects-dynamically
-   *
-   * @param obj1
-   * @param obj2
-   * @returns obj3 a new object based on obj1 and obj2
-   */
-  function _mergeOptions(obj1,obj2) {
-    var obj3 = {};
-    for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
-    for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
-    return obj3;
-  };
+    this.initOnLoad = function() {
+      return settings.features.paginate;
+    };
 
-  var introJs = function (targetElm) {
-    if (typeof (targetElm) === 'object') {
-      //Ok, create a new instance
-      return new IntroJs(targetElm);
+    this.init = function() {
+      var perPageUrl = window.location.search.match(new RegExp(settings.params.perPage + '=([^&]*)'));
 
-    } else if (typeof (targetElm) === 'string') {
-      //select the target element with query selector
-      var targetElement = document.querySelector(targetElm);
-
-      if (targetElement) {
-        return new IntroJs(targetElement);
+      // If perPage is present in URL parameters and pushState is enabled
+      // (meaning that it'd be possible for dynatable to have put the
+      // perPage parameter in the URL)
+      if (perPageUrl && settings.features.pushState) {
+        // Don't reset page to 1 on init, since it might override page
+        // set on init from URL
+        this.set(perPageUrl[1], true);
       } else {
-        throw new Error('There is no element with given selector.');
+        this.set(settings.dataset.perPageDefault, true);
       }
-    } else {
-      return new IntroJs(document.body);
+
+      if (settings.features.perPageSelect) {
+        this.attach();
+      }
+    };
+
+    this.create = function() {
+      var $select = $('<select>', {
+            id: 'dynatable-per-page-' + obj.element.id,
+            'class': 'dynatable-per-page-select'
+          });
+
+      for (var i = 0, len = settings.dataset.perPageOptions.length; i < len; i++) {
+        var number = settings.dataset.perPageOptions[i],
+            selected = settings.dataset.perPage == number ? 'selected="selected"' : '';
+        $select.append('<option value="' + number + '" ' + selected + '>' + number + '</option>');
+      }
+
+      $select.bind('change', function(e) {
+        _this.set($(this).val());
+        obj.process();
+      });
+
+      return $('<span />', {
+        'class': 'dynatable-per-page'
+      }).append("<span class='dynatable-per-page-label'>" + settings.inputs.perPageText + "</span>").append($select);
+    };
+
+    this.attach = function() {
+      var $target = settings.inputs.perPageTarget ? $(settings.inputs.perPageTarget) : obj.$element;
+      $target[settings.inputs.perPagePlacement](this.create());
+    };
+
+    this.set = function(number, skipResetPage) {
+      if (!skipResetPage) { obj.paginationPage.set(1); }
+      settings.dataset.perPage = parseInt(number);
+    };
+  };
+
+  // pagination links which update dataset.page attribute
+  function PaginationLinks(obj, settings) {
+    var _this = this;
+
+    this.initOnLoad = function() {
+      return settings.features.paginate;
+    };
+
+    this.init = function() {
+      this.attach();
+    };
+
+    this.create = function() {
+      var pageLinks = '<ul id="' + 'dynatable-pagination-links-' + obj.element.id + '" class="' + settings.inputs.paginationClass + '">',
+          pageLinkClass = settings.inputs.paginationLinkClass,
+          activePageClass = settings.inputs.paginationActiveClass,
+          disabledPageClass = settings.inputs.paginationDisabledClass,
+          pages = Math.ceil(settings.dataset.queryRecordCount / settings.dataset.perPage),
+          page = settings.dataset.page,
+          breaks = [
+            settings.inputs.paginationGap[0],
+            settings.dataset.page - settings.inputs.paginationGap[1],
+            settings.dataset.page + settings.inputs.paginationGap[2],
+            (pages + 1) - settings.inputs.paginationGap[3]
+          ];
+
+      pageLinks += '<li><span>Pages: </span></li>';
+
+      for (var i = 1; i <= pages; i++) {
+        if ( (i > breaks[0] && i < breaks[1]) || (i > breaks[2] && i < breaks[3])) {
+          // skip to next iteration in loop
+          continue;
+        } else {
+          var li = obj.paginationLinks.buildLink(i, i, pageLinkClass, page == i, activePageClass),
+              breakIndex,
+              nextBreak;
+
+          // If i is not between one of the following
+          // (1 + (settings.paginationGap[0]))
+          // (page - settings.paginationGap[1])
+          // (page + settings.paginationGap[2])
+          // (pages - settings.paginationGap[3])
+          breakIndex = $.inArray(i, breaks);
+          nextBreak = breaks[breakIndex + 1];
+          if (breakIndex > 0 && i !== 1 && nextBreak && nextBreak > (i + 1)) {
+            var ellip = '<li><span class="dynatable-page-break">&hellip;</span></li>';
+            li = breakIndex < 2 ? ellip + li : li + ellip;
+          }
+
+          if (settings.inputs.paginationPrev && i === 1) {
+            var prevLi = obj.paginationLinks.buildLink(page - 1, settings.inputs.paginationPrev, pageLinkClass + ' ' + settings.inputs.paginationPrevClass, page === 1, disabledPageClass);
+            li = prevLi + li;
+          }
+          if (settings.inputs.paginationNext && i === pages) {
+            var nextLi = obj.paginationLinks.buildLink(page + 1, settings.inputs.paginationNext, pageLinkClass + ' ' + settings.inputs.paginationNextClass, page === pages, disabledPageClass);
+            li += nextLi;
+          }
+
+          pageLinks += li;
+        }
+      }
+
+      pageLinks += '</ul>';
+
+      // only bind page handler to non-active and non-disabled page links
+      var selector = '#dynatable-pagination-links-' + obj.element.id + ' a.' + pageLinkClass + ':not(.' + activePageClass + ',.' + disabledPageClass + ')';
+      // kill any existing delegated-bindings so they don't stack up
+      $(document).undelegate(selector, 'click.dynatable');
+      $(document).delegate(selector, 'click.dynatable', function(e) {
+        $this = $(this);
+        $this.closest(settings.inputs.paginationClass).find('.' + activePageClass).removeClass(activePageClass);
+        $this.addClass(activePageClass);
+
+        obj.paginationPage.set($this.data('dynatable-page'));
+        obj.process();
+        e.preventDefault();
+      });
+
+      return pageLinks;
+    };
+
+    this.buildLink = function(page, label, linkClass, conditional, conditionalClass) {
+      var link = '<a data-dynatable-page=' + page + ' class="' + linkClass,
+          li = '<li';
+
+      if (conditional) {
+        link += ' ' + conditionalClass;
+        li += ' class="' + conditionalClass + '"';
+      }
+
+      link += '">' + label + '</a>';
+      li += '>' + link + '</li>';
+
+      return li;
+    };
+
+    this.attach = function() {
+      // append page links *after* delegate-event-binding so it doesn't need to
+      // find and select all page links to bind event
+      var $target = settings.inputs.paginationLinkTarget ? $(settings.inputs.paginationLinkTarget) : obj.$element;
+      $target[settings.inputs.paginationLinkPlacement](obj.paginationLinks.create());
+    };
+  };
+
+  utility = dt.utility = {
+    normalizeText: function(text, style) {
+      text = this.textTransform[style](text);
+      return text;
+    },
+    textTransform: {
+      trimDash: function(text) {
+        return text.replace(/^\s+|\s+$/g, "").replace(/\s+/g, "-");
+      },
+      camelCase: function(text) {
+        text = this.trimDash(text);
+        return text
+          .replace(/(\-[a-zA-Z])/g, function($1){return $1.toUpperCase().replace('-','');})
+          .replace(/([A-Z])([A-Z]+)/g, function($1,$2,$3){return $2 + $3.toLowerCase();})
+          .replace(/^[A-Z]/, function($1){return $1.toLowerCase();});
+      },
+      dashed: function(text) {
+        text = this.trimDash(text);
+        return this.lowercase(text);
+      },
+      underscore: function(text) {
+        text = this.trimDash(text);
+        return this.lowercase(text.replace(/(-)/g, '_'));
+      },
+      lowercase: function(text) {
+        return text.replace(/([A-Z])/g, function($1){return $1.toLowerCase();});
+      }
+    },
+    // Deserialize params in URL to object
+    // see http://stackoverflow.com/questions/1131630/javascript-jquery-param-inverse-function/3401265#3401265
+    deserialize: function(query) {
+      if (!query) return {};
+      // modified to accept an array of partial URL strings
+      if (typeof(query) === "object") { query = query.join('&'); }
+
+      var hash = {},
+          vars = query.split("&");
+
+      for (var i = 0; i < vars.length; i++) {
+        var pair = vars[i].split("="),
+            k = decodeURIComponent(pair[0]),
+            v, m;
+
+        if (!pair[1]) { continue };
+        v = decodeURIComponent(pair[1].replace(/\+/g, ' '));
+
+        // modified to parse multi-level parameters (e.g. "hi[there][dude]=whatsup" => hi: {there: {dude: "whatsup"}})
+        while (m = k.match(/([^&=]+)\[([^&=]+)\]$/)) {
+          var origV = v;
+          k = m[1];
+          v = {};
+
+          // If nested param ends in '][', then the regex above erroneously included half of a trailing '[]',
+          // which indicates the end-value is part of an array
+          if (m[2].substr(m[2].length-2) == '][') { // must use substr for IE to understand it
+            v[m[2].substr(0,m[2].length-2)] = [origV];
+          } else {
+            v[m[2]] = origV;
+          }
+        }
+
+        // If it is the first entry with this name
+        if (typeof hash[k] === "undefined") {
+          if (k.substr(k.length-2) != '[]') { // not end with []. cannot use negative index as IE doesn't understand it
+            hash[k] = v;
+          } else {
+            hash[k] = [v];
+          }
+        // If subsequent entry with this name and not array
+        } else if (typeof hash[k] === "string") {
+          hash[k] = v;  // replace it
+        // modified to add support for objects
+        } else if (typeof hash[k] === "object") {
+          hash[k] = $.extend({}, hash[k], v);
+        // If subsequent entry with this name and is array
+        } else {
+          hash[k].push(v);
+        }
+      }
+      return hash;
+    },
+    refreshQueryString: function(urlString, data, settings) {
+      var _this = this,
+          queryString = urlString.split('?'),
+          path = queryString.shift(),
+          urlOptions;
+
+      urlOptions = this.deserialize(urlString);
+
+      // Loop through each dynatable param and update the URL with it
+      for (attr in settings.params) {
+        if (settings.params.hasOwnProperty(attr)) {
+          var label = settings.params[attr];
+          // Skip over parameters matching attributes for disabled features (i.e. leave them untouched),
+          // because if the feature is turned off, then parameter name is a coincidence and it's unrelated to dynatable.
+          if (
+            (!settings.features.sort && attr == "sorts") ||
+              (!settings.features.paginate && _this.anyMatch(attr, ["page", "perPage", "offset"], function(attr, param) { return attr == param; }))
+          ) {
+            continue;
+          }
+
+          // Delete page and offset from url params if on page 1 (default)
+          if ((attr === "page" || attr === "offset") && data["page"] === 1) {
+            if (urlOptions[label]) {
+              delete urlOptions[label];
+            }
+            continue;
+          }
+
+          // Delete perPage from url params if default perPage value
+          if (attr === "perPage" && data[label] == settings.dataset.perPageDefault) {
+            if (urlOptions[label]) {
+              delete urlOptions[label];
+            }
+            continue;
+          }
+
+          // For queries, we're going to handle each possible query parameter individually here instead of
+          // handling the entire queries object below, since we need to make sure that this is a query controlled by dynatable.
+          if (attr == "queries" && data[label]) {
+            var queries = settings.inputs.queries || [],
+                inputQueries = $.makeArray(queries.map(function() { return $(this).attr('name') }));
+
+            if (settings.features.search) { inputQueries.push('search'); }
+
+            for (var i = 0, len = inputQueries.length; i < len; i++) {
+              var attr = inputQueries[i];
+              if (data[label][attr]) {
+                if (typeof urlOptions[label] === 'undefined') { urlOptions[label] = {}; }
+                urlOptions[label][attr] = data[label][attr];
+              } else {
+                delete urlOptions[label][attr];
+              }
+            }
+            continue;
+          }
+
+          // If we haven't returned true by now, then we actually want to update the parameter in the URL
+          if (data[label]) {
+            urlOptions[label] = data[label];
+          } else {
+            delete urlOptions[label];
+          }
+        }
+      }
+      return decodeURI($.param(urlOptions));
+    },
+    // Get array of keys from object
+    // see http://stackoverflow.com/questions/208016/how-to-list-the-properties-of-a-javascript-object/208020#208020
+    keysFromObject: function(obj){
+      var keys = [];
+      for (var key in obj){
+        keys.push(key);
+      }
+      return keys;
+    },
+    // Find an object in an array of objects by attributes.
+    // E.g. find object with {id: 'hi', name: 'there'} in an array of objects
+    findObjectInArray: function(array, objectAttr) {
+      var _this = this,
+          foundObject;
+      for (var i = 0, len = array.length; i < len; i++) {
+        var item = array[i];
+        // For each object in array, test to make sure all attributes in objectAttr match
+        if (_this.allMatch(item, objectAttr, function(item, key, value) { return item[key] == value; })) {
+          foundObject = item;
+          break;
+        }
+      }
+      return foundObject;
+    },
+    // Return true if supplied test function passes for ALL items in an array
+    allMatch: function(item, arrayOrObject, test) {
+      // start off with true result by default
+      var match = true,
+          isArray = $.isArray(arrayOrObject);
+      // Loop through all items in array
+      $.each(arrayOrObject, function(key, value) {
+        var result = isArray ? test(item, value) : test(item, key, value);
+        // If a single item tests false, go ahead and break the array by returning false
+        // and return false as result,
+        // otherwise, continue with next iteration in loop
+        // (if we make it through all iterations without overriding match with false,
+        // then we can return the true result we started with by default)
+        if (!result) { return match = false; }
+      });
+      return match;
+    },
+    // Return true if supplied test function passes for ANY items in an array
+    anyMatch: function(item, arrayOrObject, test) {
+      var match = false,
+          isArray = $.isArray(arrayOrObject);
+
+      $.each(arrayOrObject, function(key, value) {
+        var result = isArray ? test(item, value) : test(item, key, value);
+        if (result) {
+          // As soon as a match is found, set match to true, and return false to stop the `$.each` loop
+          match = true;
+          return false;
+        }
+      });
+      return match;
+    },
+    // Return true if two objects are equal
+    // (i.e. have the same attributes and attribute values)
+    objectsEqual: function(a, b) {
+      for (attr in a) {
+        if (a.hasOwnProperty(attr)) {
+          if (!b.hasOwnProperty(attr) || a[attr] !== b[attr]) {
+            return false;
+          }
+        }
+      }
+      for (attr in b) {
+        if (b.hasOwnProperty(attr) && !a.hasOwnProperty(attr)) {
+          return false;
+        }
+      }
+      return true;
+    },
+    // Taken from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/105074#105074
+    randomHash: function() {
+      return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
     }
   };
 
-  /**
-   * Current IntroJs version
-   *
-   * @property version
-   * @type String
-   */
-  introJs.version = VERSION;
+  //-----------------------------------------------------------------
+  // Build the dynatable plugin
+  //-----------------------------------------------------------------
 
-  //Prototype
-  introJs.fn = IntroJs.prototype = {
-    clone: function () {
-      return new IntroJs(this);
-    },
-    setOption: function(option, value) {
-      this._options[option] = value;
-      return this;
-    },
-    setOptions: function(options) {
-      this._options = _mergeOptions(this._options, options);
-      return this;
-    },
-    start: function () {
-      _introForElement.call(this, this._targetElement);
-      return this;
-    },
-    goToStep: function(step) {
-      _goToStep.call(this, step);
-      return this;
-    },
-    nextStep: function() {
-      _nextStep.call(this);
-      return this;
-    },
-    previousStep: function() {
-      _previousStep.call(this);
-      return this;
-    },
-    exit: function() {
-      _exitIntro.call(this, this._targetElement);
-      return this;
-    },
-    refresh: function() {
-      _setHelperLayerPosition.call(this, document.querySelector('.introjs-helperLayer'));
-      _setHelperLayerPosition.call(this, document.querySelector('.introjs-tooltipReferenceLayer'));
-      return this;
-    },
-    onbeforechange: function(providedCallback) {
-      if (typeof (providedCallback) === 'function') {
-        this._introBeforeChangeCallback = providedCallback;
-      } else {
-        throw new Error('Provided callback for onbeforechange was not a function');
-      }
-      return this;
-    },
-    onchange: function(providedCallback) {
-      if (typeof (providedCallback) === 'function') {
-        this._introChangeCallback = providedCallback;
-      } else {
-        throw new Error('Provided callback for onchange was not a function.');
-      }
-      return this;
-    },
-    onafterchange: function(providedCallback) {
-      if (typeof (providedCallback) === 'function') {
-        this._introAfterChangeCallback = providedCallback;
-      } else {
-        throw new Error('Provided callback for onafterchange was not a function');
-      }
-      return this;
-    },
-    oncomplete: function(providedCallback) {
-      if (typeof (providedCallback) === 'function') {
-        this._introCompleteCallback = providedCallback;
-      } else {
-        throw new Error('Provided callback for oncomplete was not a function.');
-      }
-      return this;
-    },
-    onhintsadded: function(providedCallback) {
-      if (typeof (providedCallback) === 'function') {
-        this._hintsAddedCallback = providedCallback;
-      } else {
-        throw new Error('Provided callback for onhintsadded was not a function.');
-      }
-      return this;
-    },
-    onhintclick: function(providedCallback) {
-      if (typeof (providedCallback) === 'function') {
-        this._hintClickCallback = providedCallback;
-      } else {
-        throw new Error('Provided callback for onhintclick was not a function.');
-      }
-      return this;
-    },
-    onhintclose: function(providedCallback) {
-      if (typeof (providedCallback) === 'function') {
-        this._hintCloseCallback = providedCallback;
-      } else {
-        throw new Error('Provided callback for onhintclose was not a function.');
-      }
-      return this;
-    },
-    onexit: function(providedCallback) {
-      if (typeof (providedCallback) === 'function') {
-        this._introExitCallback = providedCallback;
-      } else {
-        throw new Error('Provided callback for onexit was not a function.');
-      }
-      return this;
-    },
-    addHints: function() {
-      _populateHints.call(this, this._targetElement);
-      return this;
-    }
+  // Object.create support test, and fallback for browsers without it
+  if ( typeof Object.create !== "function" ) {
+    Object.create = function (o) {
+      function F() {}
+      F.prototype = o;
+      return new F();
+    };
+  }
+
+  //-----------------------------------------------------------------
+  // Global dynatable plugin setting defaults
+  //-----------------------------------------------------------------
+
+  $.dynatableSetup = function(options) {
+    defaults = mergeSettings(options);
   };
 
-  exports.introJs = introJs;
-  return introJs;
+  // Create dynatable plugin based on a defined object
+  $.dynatable = function( object ) {
+    $.fn['dynatable'] = function( options ) {
+      return this.each(function() {
+        if ( ! $.data( this, 'dynatable' ) ) {
+          $.data( this, 'dynatable', Object.create(object).init(this, options) );
+        }
+      });
+    };
+  };
+
+  $.dynatable(dt);
+
+})(jQuery);
+
+/*! jQuery UI - v1.11.4 - 2015-06-17
+* http://jqueryui.com
+* Includes: core.js, widget.js, mouse.js, sortable.js, slider.js
+* Copyright 2015 jQuery Foundation and other contributors; Licensed MIT */
+
+(function( factory ) {
+	if ( typeof define === "function" && define.amd ) {
+
+		// AMD. Register as an anonymous module.
+		define([ "jquery" ], factory );
+	} else {
+
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+/*!
+ * jQuery UI Core 1.11.4
+ * http://jqueryui.com
+ *
+ * Copyright jQuery Foundation and other contributors
+ * Released under the MIT license.
+ * http://jquery.org/license
+ *
+ * http://api.jqueryui.com/category/ui-core/
+ */
+
+
+// $.ui might exist from components with no dependencies, e.g., $.ui.position
+$.ui = $.ui || {};
+
+$.extend( $.ui, {
+	version: "1.11.4",
+
+	keyCode: {
+		BACKSPACE: 8,
+		COMMA: 188,
+		DELETE: 46,
+		DOWN: 40,
+		END: 35,
+		ENTER: 13,
+		ESCAPE: 27,
+		HOME: 36,
+		LEFT: 37,
+		PAGE_DOWN: 34,
+		PAGE_UP: 33,
+		PERIOD: 190,
+		RIGHT: 39,
+		SPACE: 32,
+		TAB: 9,
+		UP: 38
+	}
+});
+
+// plugins
+$.fn.extend({
+	scrollParent: function( includeHidden ) {
+		var position = this.css( "position" ),
+			excludeStaticParent = position === "absolute",
+			overflowRegex = includeHidden ? /(auto|scroll|hidden)/ : /(auto|scroll)/,
+			scrollParent = this.parents().filter( function() {
+				var parent = $( this );
+				if ( excludeStaticParent && parent.css( "position" ) === "static" ) {
+					return false;
+				}
+				return overflowRegex.test( parent.css( "overflow" ) + parent.css( "overflow-y" ) + parent.css( "overflow-x" ) );
+			}).eq( 0 );
+
+		return position === "fixed" || !scrollParent.length ? $( this[ 0 ].ownerDocument || document ) : scrollParent;
+	},
+
+	uniqueId: (function() {
+		var uuid = 0;
+
+		return function() {
+			return this.each(function() {
+				if ( !this.id ) {
+					this.id = "ui-id-" + ( ++uuid );
+				}
+			});
+		};
+	})(),
+
+	removeUniqueId: function() {
+		return this.each(function() {
+			if ( /^ui-id-\d+$/.test( this.id ) ) {
+				$( this ).removeAttr( "id" );
+			}
+		});
+	}
+});
+
+// selectors
+function focusable( element, isTabIndexNotNaN ) {
+	var map, mapName, img,
+		nodeName = element.nodeName.toLowerCase();
+	if ( "area" === nodeName ) {
+		map = element.parentNode;
+		mapName = map.name;
+		if ( !element.href || !mapName || map.nodeName.toLowerCase() !== "map" ) {
+			return false;
+		}
+		img = $( "img[usemap='#" + mapName + "']" )[ 0 ];
+		return !!img && visible( img );
+	}
+	return ( /^(input|select|textarea|button|object)$/.test( nodeName ) ?
+		!element.disabled :
+		"a" === nodeName ?
+			element.href || isTabIndexNotNaN :
+			isTabIndexNotNaN) &&
+		// the element and all of its ancestors must be visible
+		visible( element );
+}
+
+function visible( element ) {
+	return $.expr.filters.visible( element ) &&
+		!$( element ).parents().addBack().filter(function() {
+			return $.css( this, "visibility" ) === "hidden";
+		}).length;
+}
+
+$.extend( $.expr[ ":" ], {
+	data: $.expr.createPseudo ?
+		$.expr.createPseudo(function( dataName ) {
+			return function( elem ) {
+				return !!$.data( elem, dataName );
+			};
+		}) :
+		// support: jQuery <1.8
+		function( elem, i, match ) {
+			return !!$.data( elem, match[ 3 ] );
+		},
+
+	focusable: function( element ) {
+		return focusable( element, !isNaN( $.attr( element, "tabindex" ) ) );
+	},
+
+	tabbable: function( element ) {
+		var tabIndex = $.attr( element, "tabindex" ),
+			isTabIndexNaN = isNaN( tabIndex );
+		return ( isTabIndexNaN || tabIndex >= 0 ) && focusable( element, !isTabIndexNaN );
+	}
+});
+
+// support: jQuery <1.8
+if ( !$( "<a>" ).outerWidth( 1 ).jquery ) {
+	$.each( [ "Width", "Height" ], function( i, name ) {
+		var side = name === "Width" ? [ "Left", "Right" ] : [ "Top", "Bottom" ],
+			type = name.toLowerCase(),
+			orig = {
+				innerWidth: $.fn.innerWidth,
+				innerHeight: $.fn.innerHeight,
+				outerWidth: $.fn.outerWidth,
+				outerHeight: $.fn.outerHeight
+			};
+
+		function reduce( elem, size, border, margin ) {
+			$.each( side, function() {
+				size -= parseFloat( $.css( elem, "padding" + this ) ) || 0;
+				if ( border ) {
+					size -= parseFloat( $.css( elem, "border" + this + "Width" ) ) || 0;
+				}
+				if ( margin ) {
+					size -= parseFloat( $.css( elem, "margin" + this ) ) || 0;
+				}
+			});
+			return size;
+		}
+
+		$.fn[ "inner" + name ] = function( size ) {
+			if ( size === undefined ) {
+				return orig[ "inner" + name ].call( this );
+			}
+
+			return this.each(function() {
+				$( this ).css( type, reduce( this, size ) + "px" );
+			});
+		};
+
+		$.fn[ "outer" + name] = function( size, margin ) {
+			if ( typeof size !== "number" ) {
+				return orig[ "outer" + name ].call( this, size );
+			}
+
+			return this.each(function() {
+				$( this).css( type, reduce( this, size, true, margin ) + "px" );
+			});
+		};
+	});
+}
+
+// support: jQuery <1.8
+if ( !$.fn.addBack ) {
+	$.fn.addBack = function( selector ) {
+		return this.add( selector == null ?
+			this.prevObject : this.prevObject.filter( selector )
+		);
+	};
+}
+
+// support: jQuery 1.6.1, 1.6.2 (http://bugs.jquery.com/ticket/9413)
+if ( $( "<a>" ).data( "a-b", "a" ).removeData( "a-b" ).data( "a-b" ) ) {
+	$.fn.removeData = (function( removeData ) {
+		return function( key ) {
+			if ( arguments.length ) {
+				return removeData.call( this, $.camelCase( key ) );
+			} else {
+				return removeData.call( this );
+			}
+		};
+	})( $.fn.removeData );
+}
+
+// deprecated
+$.ui.ie = !!/msie [\w.]+/.exec( navigator.userAgent.toLowerCase() );
+
+$.fn.extend({
+	focus: (function( orig ) {
+		return function( delay, fn ) {
+			return typeof delay === "number" ?
+				this.each(function() {
+					var elem = this;
+					setTimeout(function() {
+						$( elem ).focus();
+						if ( fn ) {
+							fn.call( elem );
+						}
+					}, delay );
+				}) :
+				orig.apply( this, arguments );
+		};
+	})( $.fn.focus ),
+
+	disableSelection: (function() {
+		var eventType = "onselectstart" in document.createElement( "div" ) ?
+			"selectstart" :
+			"mousedown";
+
+		return function() {
+			return this.bind( eventType + ".ui-disableSelection", function( event ) {
+				event.preventDefault();
+			});
+		};
+	})(),
+
+	enableSelection: function() {
+		return this.unbind( ".ui-disableSelection" );
+	},
+
+	zIndex: function( zIndex ) {
+		if ( zIndex !== undefined ) {
+			return this.css( "zIndex", zIndex );
+		}
+
+		if ( this.length ) {
+			var elem = $( this[ 0 ] ), position, value;
+			while ( elem.length && elem[ 0 ] !== document ) {
+				// Ignore z-index if position is set to a value where z-index is ignored by the browser
+				// This makes behavior of this function consistent across browsers
+				// WebKit always returns auto if the element is positioned
+				position = elem.css( "position" );
+				if ( position === "absolute" || position === "relative" || position === "fixed" ) {
+					// IE returns 0 when zIndex is not specified
+					// other browsers return a string
+					// we ignore the case of nested elements with an explicit value of 0
+					// <div style="z-index: -10;"><div style="z-index: 0;"></div></div>
+					value = parseInt( elem.css( "zIndex" ), 10 );
+					if ( !isNaN( value ) && value !== 0 ) {
+						return value;
+					}
+				}
+				elem = elem.parent();
+			}
+		}
+
+		return 0;
+	}
+});
+
+// $.ui.plugin is deprecated. Use $.widget() extensions instead.
+$.ui.plugin = {
+	add: function( module, option, set ) {
+		var i,
+			proto = $.ui[ module ].prototype;
+		for ( i in set ) {
+			proto.plugins[ i ] = proto.plugins[ i ] || [];
+			proto.plugins[ i ].push( [ option, set[ i ] ] );
+		}
+	},
+	call: function( instance, name, args, allowDisconnected ) {
+		var i,
+			set = instance.plugins[ name ];
+
+		if ( !set ) {
+			return;
+		}
+
+		if ( !allowDisconnected && ( !instance.element[ 0 ].parentNode || instance.element[ 0 ].parentNode.nodeType === 11 ) ) {
+			return;
+		}
+
+		for ( i = 0; i < set.length; i++ ) {
+			if ( instance.options[ set[ i ][ 0 ] ] ) {
+				set[ i ][ 1 ].apply( instance.element, args );
+			}
+		}
+	}
+};
+
+
+/*!
+ * jQuery UI Widget 1.11.4
+ * http://jqueryui.com
+ *
+ * Copyright jQuery Foundation and other contributors
+ * Released under the MIT license.
+ * http://jquery.org/license
+ *
+ * http://api.jqueryui.com/jQuery.widget/
+ */
+
+
+var widget_uuid = 0,
+	widget_slice = Array.prototype.slice;
+
+$.cleanData = (function( orig ) {
+	return function( elems ) {
+		var events, elem, i;
+		for ( i = 0; (elem = elems[i]) != null; i++ ) {
+			try {
+
+				// Only trigger remove when necessary to save time
+				events = $._data( elem, "events" );
+				if ( events && events.remove ) {
+					$( elem ).triggerHandler( "remove" );
+				}
+
+			// http://bugs.jquery.com/ticket/8235
+			} catch ( e ) {}
+		}
+		orig( elems );
+	};
+})( $.cleanData );
+
+$.widget = function( name, base, prototype ) {
+	var fullName, existingConstructor, constructor, basePrototype,
+		// proxiedPrototype allows the provided prototype to remain unmodified
+		// so that it can be used as a mixin for multiple widgets (#8876)
+		proxiedPrototype = {},
+		namespace = name.split( "." )[ 0 ];
+
+	name = name.split( "." )[ 1 ];
+	fullName = namespace + "-" + name;
+
+	if ( !prototype ) {
+		prototype = base;
+		base = $.Widget;
+	}
+
+	// create selector for plugin
+	$.expr[ ":" ][ fullName.toLowerCase() ] = function( elem ) {
+		return !!$.data( elem, fullName );
+	};
+
+	$[ namespace ] = $[ namespace ] || {};
+	existingConstructor = $[ namespace ][ name ];
+	constructor = $[ namespace ][ name ] = function( options, element ) {
+		// allow instantiation without "new" keyword
+		if ( !this._createWidget ) {
+			return new constructor( options, element );
+		}
+
+		// allow instantiation without initializing for simple inheritance
+		// must use "new" keyword (the code above always passes args)
+		if ( arguments.length ) {
+			this._createWidget( options, element );
+		}
+	};
+	// extend with the existing constructor to carry over any static properties
+	$.extend( constructor, existingConstructor, {
+		version: prototype.version,
+		// copy the object used to create the prototype in case we need to
+		// redefine the widget later
+		_proto: $.extend( {}, prototype ),
+		// track widgets that inherit from this widget in case this widget is
+		// redefined after a widget inherits from it
+		_childConstructors: []
+	});
+
+	basePrototype = new base();
+	// we need to make the options hash a property directly on the new instance
+	// otherwise we'll modify the options hash on the prototype that we're
+	// inheriting from
+	basePrototype.options = $.widget.extend( {}, basePrototype.options );
+	$.each( prototype, function( prop, value ) {
+		if ( !$.isFunction( value ) ) {
+			proxiedPrototype[ prop ] = value;
+			return;
+		}
+		proxiedPrototype[ prop ] = (function() {
+			var _super = function() {
+					return base.prototype[ prop ].apply( this, arguments );
+				},
+				_superApply = function( args ) {
+					return base.prototype[ prop ].apply( this, args );
+				};
+			return function() {
+				var __super = this._super,
+					__superApply = this._superApply,
+					returnValue;
+
+				this._super = _super;
+				this._superApply = _superApply;
+
+				returnValue = value.apply( this, arguments );
+
+				this._super = __super;
+				this._superApply = __superApply;
+
+				return returnValue;
+			};
+		})();
+	});
+	constructor.prototype = $.widget.extend( basePrototype, {
+		// TODO: remove support for widgetEventPrefix
+		// always use the name + a colon as the prefix, e.g., draggable:start
+		// don't prefix for widgets that aren't DOM-based
+		widgetEventPrefix: existingConstructor ? (basePrototype.widgetEventPrefix || name) : name
+	}, proxiedPrototype, {
+		constructor: constructor,
+		namespace: namespace,
+		widgetName: name,
+		widgetFullName: fullName
+	});
+
+	// If this widget is being redefined then we need to find all widgets that
+	// are inheriting from it and redefine all of them so that they inherit from
+	// the new version of this widget. We're essentially trying to replace one
+	// level in the prototype chain.
+	if ( existingConstructor ) {
+		$.each( existingConstructor._childConstructors, function( i, child ) {
+			var childPrototype = child.prototype;
+
+			// redefine the child widget using the same prototype that was
+			// originally used, but inherit from the new version of the base
+			$.widget( childPrototype.namespace + "." + childPrototype.widgetName, constructor, child._proto );
+		});
+		// remove the list of existing child constructors from the old constructor
+		// so the old child constructors can be garbage collected
+		delete existingConstructor._childConstructors;
+	} else {
+		base._childConstructors.push( constructor );
+	}
+
+	$.widget.bridge( name, constructor );
+
+	return constructor;
+};
+
+$.widget.extend = function( target ) {
+	var input = widget_slice.call( arguments, 1 ),
+		inputIndex = 0,
+		inputLength = input.length,
+		key,
+		value;
+	for ( ; inputIndex < inputLength; inputIndex++ ) {
+		for ( key in input[ inputIndex ] ) {
+			value = input[ inputIndex ][ key ];
+			if ( input[ inputIndex ].hasOwnProperty( key ) && value !== undefined ) {
+				// Clone objects
+				if ( $.isPlainObject( value ) ) {
+					target[ key ] = $.isPlainObject( target[ key ] ) ?
+						$.widget.extend( {}, target[ key ], value ) :
+						// Don't extend strings, arrays, etc. with objects
+						$.widget.extend( {}, value );
+				// Copy everything else by reference
+				} else {
+					target[ key ] = value;
+				}
+			}
+		}
+	}
+	return target;
+};
+
+$.widget.bridge = function( name, object ) {
+	var fullName = object.prototype.widgetFullName || name;
+	$.fn[ name ] = function( options ) {
+		var isMethodCall = typeof options === "string",
+			args = widget_slice.call( arguments, 1 ),
+			returnValue = this;
+
+		if ( isMethodCall ) {
+			this.each(function() {
+				var methodValue,
+					instance = $.data( this, fullName );
+				if ( options === "instance" ) {
+					returnValue = instance;
+					return false;
+				}
+				if ( !instance ) {
+					return $.error( "cannot call methods on " + name + " prior to initialization; " +
+						"attempted to call method '" + options + "'" );
+				}
+				if ( !$.isFunction( instance[options] ) || options.charAt( 0 ) === "_" ) {
+					return $.error( "no such method '" + options + "' for " + name + " widget instance" );
+				}
+				methodValue = instance[ options ].apply( instance, args );
+				if ( methodValue !== instance && methodValue !== undefined ) {
+					returnValue = methodValue && methodValue.jquery ?
+						returnValue.pushStack( methodValue.get() ) :
+						methodValue;
+					return false;
+				}
+			});
+		} else {
+
+			// Allow multiple hashes to be passed on init
+			if ( args.length ) {
+				options = $.widget.extend.apply( null, [ options ].concat(args) );
+			}
+
+			this.each(function() {
+				var instance = $.data( this, fullName );
+				if ( instance ) {
+					instance.option( options || {} );
+					if ( instance._init ) {
+						instance._init();
+					}
+				} else {
+					$.data( this, fullName, new object( options, this ) );
+				}
+			});
+		}
+
+		return returnValue;
+	};
+};
+
+$.Widget = function( /* options, element */ ) {};
+$.Widget._childConstructors = [];
+
+$.Widget.prototype = {
+	widgetName: "widget",
+	widgetEventPrefix: "",
+	defaultElement: "<div>",
+	options: {
+		disabled: false,
+
+		// callbacks
+		create: null
+	},
+	_createWidget: function( options, element ) {
+		element = $( element || this.defaultElement || this )[ 0 ];
+		this.element = $( element );
+		this.uuid = widget_uuid++;
+		this.eventNamespace = "." + this.widgetName + this.uuid;
+
+		this.bindings = $();
+		this.hoverable = $();
+		this.focusable = $();
+
+		if ( element !== this ) {
+			$.data( element, this.widgetFullName, this );
+			this._on( true, this.element, {
+				remove: function( event ) {
+					if ( event.target === element ) {
+						this.destroy();
+					}
+				}
+			});
+			this.document = $( element.style ?
+				// element within the document
+				element.ownerDocument :
+				// element is window or document
+				element.document || element );
+			this.window = $( this.document[0].defaultView || this.document[0].parentWindow );
+		}
+
+		this.options = $.widget.extend( {},
+			this.options,
+			this._getCreateOptions(),
+			options );
+
+		this._create();
+		this._trigger( "create", null, this._getCreateEventData() );
+		this._init();
+	},
+	_getCreateOptions: $.noop,
+	_getCreateEventData: $.noop,
+	_create: $.noop,
+	_init: $.noop,
+
+	destroy: function() {
+		this._destroy();
+		// we can probably remove the unbind calls in 2.0
+		// all event bindings should go through this._on()
+		this.element
+			.unbind( this.eventNamespace )
+			.removeData( this.widgetFullName )
+			// support: jquery <1.6.3
+			// http://bugs.jquery.com/ticket/9413
+			.removeData( $.camelCase( this.widgetFullName ) );
+		this.widget()
+			.unbind( this.eventNamespace )
+			.removeAttr( "aria-disabled" )
+			.removeClass(
+				this.widgetFullName + "-disabled " +
+				"ui-state-disabled" );
+
+		// clean up events and states
+		this.bindings.unbind( this.eventNamespace );
+		this.hoverable.removeClass( "ui-state-hover" );
+		this.focusable.removeClass( "ui-state-focus" );
+	},
+	_destroy: $.noop,
+
+	widget: function() {
+		return this.element;
+	},
+
+	option: function( key, value ) {
+		var options = key,
+			parts,
+			curOption,
+			i;
+
+		if ( arguments.length === 0 ) {
+			// don't return a reference to the internal hash
+			return $.widget.extend( {}, this.options );
+		}
+
+		if ( typeof key === "string" ) {
+			// handle nested keys, e.g., "foo.bar" => { foo: { bar: ___ } }
+			options = {};
+			parts = key.split( "." );
+			key = parts.shift();
+			if ( parts.length ) {
+				curOption = options[ key ] = $.widget.extend( {}, this.options[ key ] );
+				for ( i = 0; i < parts.length - 1; i++ ) {
+					curOption[ parts[ i ] ] = curOption[ parts[ i ] ] || {};
+					curOption = curOption[ parts[ i ] ];
+				}
+				key = parts.pop();
+				if ( arguments.length === 1 ) {
+					return curOption[ key ] === undefined ? null : curOption[ key ];
+				}
+				curOption[ key ] = value;
+			} else {
+				if ( arguments.length === 1 ) {
+					return this.options[ key ] === undefined ? null : this.options[ key ];
+				}
+				options[ key ] = value;
+			}
+		}
+
+		this._setOptions( options );
+
+		return this;
+	},
+	_setOptions: function( options ) {
+		var key;
+
+		for ( key in options ) {
+			this._setOption( key, options[ key ] );
+		}
+
+		return this;
+	},
+	_setOption: function( key, value ) {
+		this.options[ key ] = value;
+
+		if ( key === "disabled" ) {
+			this.widget()
+				.toggleClass( this.widgetFullName + "-disabled", !!value );
+
+			// If the widget is becoming disabled, then nothing is interactive
+			if ( value ) {
+				this.hoverable.removeClass( "ui-state-hover" );
+				this.focusable.removeClass( "ui-state-focus" );
+			}
+		}
+
+		return this;
+	},
+
+	enable: function() {
+		return this._setOptions({ disabled: false });
+	},
+	disable: function() {
+		return this._setOptions({ disabled: true });
+	},
+
+	_on: function( suppressDisabledCheck, element, handlers ) {
+		var delegateElement,
+			instance = this;
+
+		// no suppressDisabledCheck flag, shuffle arguments
+		if ( typeof suppressDisabledCheck !== "boolean" ) {
+			handlers = element;
+			element = suppressDisabledCheck;
+			suppressDisabledCheck = false;
+		}
+
+		// no element argument, shuffle and use this.element
+		if ( !handlers ) {
+			handlers = element;
+			element = this.element;
+			delegateElement = this.widget();
+		} else {
+			element = delegateElement = $( element );
+			this.bindings = this.bindings.add( element );
+		}
+
+		$.each( handlers, function( event, handler ) {
+			function handlerProxy() {
+				// allow widgets to customize the disabled handling
+				// - disabled as an array instead of boolean
+				// - disabled class as method for disabling individual parts
+				if ( !suppressDisabledCheck &&
+						( instance.options.disabled === true ||
+							$( this ).hasClass( "ui-state-disabled" ) ) ) {
+					return;
+				}
+				return ( typeof handler === "string" ? instance[ handler ] : handler )
+					.apply( instance, arguments );
+			}
+
+			// copy the guid so direct unbinding works
+			if ( typeof handler !== "string" ) {
+				handlerProxy.guid = handler.guid =
+					handler.guid || handlerProxy.guid || $.guid++;
+			}
+
+			var match = event.match( /^([\w:-]*)\s*(.*)$/ ),
+				eventName = match[1] + instance.eventNamespace,
+				selector = match[2];
+			if ( selector ) {
+				delegateElement.delegate( selector, eventName, handlerProxy );
+			} else {
+				element.bind( eventName, handlerProxy );
+			}
+		});
+	},
+
+	_off: function( element, eventName ) {
+		eventName = (eventName || "").split( " " ).join( this.eventNamespace + " " ) +
+			this.eventNamespace;
+		element.unbind( eventName ).undelegate( eventName );
+
+		// Clear the stack to avoid memory leaks (#10056)
+		this.bindings = $( this.bindings.not( element ).get() );
+		this.focusable = $( this.focusable.not( element ).get() );
+		this.hoverable = $( this.hoverable.not( element ).get() );
+	},
+
+	_delay: function( handler, delay ) {
+		function handlerProxy() {
+			return ( typeof handler === "string" ? instance[ handler ] : handler )
+				.apply( instance, arguments );
+		}
+		var instance = this;
+		return setTimeout( handlerProxy, delay || 0 );
+	},
+
+	_hoverable: function( element ) {
+		this.hoverable = this.hoverable.add( element );
+		this._on( element, {
+			mouseenter: function( event ) {
+				$( event.currentTarget ).addClass( "ui-state-hover" );
+			},
+			mouseleave: function( event ) {
+				$( event.currentTarget ).removeClass( "ui-state-hover" );
+			}
+		});
+	},
+
+	_focusable: function( element ) {
+		this.focusable = this.focusable.add( element );
+		this._on( element, {
+			focusin: function( event ) {
+				$( event.currentTarget ).addClass( "ui-state-focus" );
+			},
+			focusout: function( event ) {
+				$( event.currentTarget ).removeClass( "ui-state-focus" );
+			}
+		});
+	},
+
+	_trigger: function( type, event, data ) {
+		var prop, orig,
+			callback = this.options[ type ];
+
+		data = data || {};
+		event = $.Event( event );
+		event.type = ( type === this.widgetEventPrefix ?
+			type :
+			this.widgetEventPrefix + type ).toLowerCase();
+		// the original event may come from any element
+		// so we need to reset the target on the new event
+		event.target = this.element[ 0 ];
+
+		// copy original event properties over to the new event
+		orig = event.originalEvent;
+		if ( orig ) {
+			for ( prop in orig ) {
+				if ( !( prop in event ) ) {
+					event[ prop ] = orig[ prop ];
+				}
+			}
+		}
+
+		this.element.trigger( event, data );
+		return !( $.isFunction( callback ) &&
+			callback.apply( this.element[0], [ event ].concat( data ) ) === false ||
+			event.isDefaultPrevented() );
+	}
+};
+
+$.each( { show: "fadeIn", hide: "fadeOut" }, function( method, defaultEffect ) {
+	$.Widget.prototype[ "_" + method ] = function( element, options, callback ) {
+		if ( typeof options === "string" ) {
+			options = { effect: options };
+		}
+		var hasOptions,
+			effectName = !options ?
+				method :
+				options === true || typeof options === "number" ?
+					defaultEffect :
+					options.effect || defaultEffect;
+		options = options || {};
+		if ( typeof options === "number" ) {
+			options = { duration: options };
+		}
+		hasOptions = !$.isEmptyObject( options );
+		options.complete = callback;
+		if ( options.delay ) {
+			element.delay( options.delay );
+		}
+		if ( hasOptions && $.effects && $.effects.effect[ effectName ] ) {
+			element[ method ]( options );
+		} else if ( effectName !== method && element[ effectName ] ) {
+			element[ effectName ]( options.duration, options.easing, callback );
+		} else {
+			element.queue(function( next ) {
+				$( this )[ method ]();
+				if ( callback ) {
+					callback.call( element[ 0 ] );
+				}
+				next();
+			});
+		}
+	};
+});
+
+var widget = $.widget;
+
+
+/*!
+ * jQuery UI Mouse 1.11.4
+ * http://jqueryui.com
+ *
+ * Copyright jQuery Foundation and other contributors
+ * Released under the MIT license.
+ * http://jquery.org/license
+ *
+ * http://api.jqueryui.com/mouse/
+ */
+
+
+var mouseHandled = false;
+$( document ).mouseup( function() {
+	mouseHandled = false;
+});
+
+var mouse = $.widget("ui.mouse", {
+	version: "1.11.4",
+	options: {
+		cancel: "input,textarea,button,select,option",
+		distance: 1,
+		delay: 0
+	},
+	_mouseInit: function() {
+		var that = this;
+
+		this.element
+			.bind("mousedown." + this.widgetName, function(event) {
+				return that._mouseDown(event);
+			})
+			.bind("click." + this.widgetName, function(event) {
+				if (true === $.data(event.target, that.widgetName + ".preventClickEvent")) {
+					$.removeData(event.target, that.widgetName + ".preventClickEvent");
+					event.stopImmediatePropagation();
+					return false;
+				}
+			});
+
+		this.started = false;
+	},
+
+	// TODO: make sure destroying one instance of mouse doesn't mess with
+	// other instances of mouse
+	_mouseDestroy: function() {
+		this.element.unbind("." + this.widgetName);
+		if ( this._mouseMoveDelegate ) {
+			this.document
+				.unbind("mousemove." + this.widgetName, this._mouseMoveDelegate)
+				.unbind("mouseup." + this.widgetName, this._mouseUpDelegate);
+		}
+	},
+
+	_mouseDown: function(event) {
+		// don't let more than one widget handle mouseStart
+		if ( mouseHandled ) {
+			return;
+		}
+
+		this._mouseMoved = false;
+
+		// we may have missed mouseup (out of window)
+		(this._mouseStarted && this._mouseUp(event));
+
+		this._mouseDownEvent = event;
+
+		var that = this,
+			btnIsLeft = (event.which === 1),
+			// event.target.nodeName works around a bug in IE 8 with
+			// disabled inputs (#7620)
+			elIsCancel = (typeof this.options.cancel === "string" && event.target.nodeName ? $(event.target).closest(this.options.cancel).length : false);
+		if (!btnIsLeft || elIsCancel || !this._mouseCapture(event)) {
+			return true;
+		}
+
+		this.mouseDelayMet = !this.options.delay;
+		if (!this.mouseDelayMet) {
+			this._mouseDelayTimer = setTimeout(function() {
+				that.mouseDelayMet = true;
+			}, this.options.delay);
+		}
+
+		if (this._mouseDistanceMet(event) && this._mouseDelayMet(event)) {
+			this._mouseStarted = (this._mouseStart(event) !== false);
+			if (!this._mouseStarted) {
+				event.preventDefault();
+				return true;
+			}
+		}
+
+		// Click event may never have fired (Gecko & Opera)
+		if (true === $.data(event.target, this.widgetName + ".preventClickEvent")) {
+			$.removeData(event.target, this.widgetName + ".preventClickEvent");
+		}
+
+		// these delegates are required to keep context
+		this._mouseMoveDelegate = function(event) {
+			return that._mouseMove(event);
+		};
+		this._mouseUpDelegate = function(event) {
+			return that._mouseUp(event);
+		};
+
+		this.document
+			.bind( "mousemove." + this.widgetName, this._mouseMoveDelegate )
+			.bind( "mouseup." + this.widgetName, this._mouseUpDelegate );
+
+		event.preventDefault();
+
+		mouseHandled = true;
+		return true;
+	},
+
+	_mouseMove: function(event) {
+		// Only check for mouseups outside the document if you've moved inside the document
+		// at least once. This prevents the firing of mouseup in the case of IE<9, which will
+		// fire a mousemove event if content is placed under the cursor. See #7778
+		// Support: IE <9
+		if ( this._mouseMoved ) {
+			// IE mouseup check - mouseup happened when mouse was out of window
+			if ($.ui.ie && ( !document.documentMode || document.documentMode < 9 ) && !event.button) {
+				return this._mouseUp(event);
+
+			// Iframe mouseup check - mouseup occurred in another document
+			} else if ( !event.which ) {
+				return this._mouseUp( event );
+			}
+		}
+
+		if ( event.which || event.button ) {
+			this._mouseMoved = true;
+		}
+
+		if (this._mouseStarted) {
+			this._mouseDrag(event);
+			return event.preventDefault();
+		}
+
+		if (this._mouseDistanceMet(event) && this._mouseDelayMet(event)) {
+			this._mouseStarted =
+				(this._mouseStart(this._mouseDownEvent, event) !== false);
+			(this._mouseStarted ? this._mouseDrag(event) : this._mouseUp(event));
+		}
+
+		return !this._mouseStarted;
+	},
+
+	_mouseUp: function(event) {
+		this.document
+			.unbind( "mousemove." + this.widgetName, this._mouseMoveDelegate )
+			.unbind( "mouseup." + this.widgetName, this._mouseUpDelegate );
+
+		if (this._mouseStarted) {
+			this._mouseStarted = false;
+
+			if (event.target === this._mouseDownEvent.target) {
+				$.data(event.target, this.widgetName + ".preventClickEvent", true);
+			}
+
+			this._mouseStop(event);
+		}
+
+		mouseHandled = false;
+		return false;
+	},
+
+	_mouseDistanceMet: function(event) {
+		return (Math.max(
+				Math.abs(this._mouseDownEvent.pageX - event.pageX),
+				Math.abs(this._mouseDownEvent.pageY - event.pageY)
+			) >= this.options.distance
+		);
+	},
+
+	_mouseDelayMet: function(/* event */) {
+		return this.mouseDelayMet;
+	},
+
+	// These are placeholder methods, to be overriden by extending plugin
+	_mouseStart: function(/* event */) {},
+	_mouseDrag: function(/* event */) {},
+	_mouseStop: function(/* event */) {},
+	_mouseCapture: function(/* event */) { return true; }
+});
+
+
+/*!
+ * jQuery UI Sortable 1.11.4
+ * http://jqueryui.com
+ *
+ * Copyright jQuery Foundation and other contributors
+ * Released under the MIT license.
+ * http://jquery.org/license
+ *
+ * http://api.jqueryui.com/sortable/
+ */
+
+
+var sortable = $.widget("ui.sortable", $.ui.mouse, {
+	version: "1.11.4",
+	widgetEventPrefix: "sort",
+	ready: false,
+	options: {
+		appendTo: "parent",
+		axis: false,
+		connectWith: false,
+		containment: false,
+		cursor: "auto",
+		cursorAt: false,
+		dropOnEmpty: true,
+		forcePlaceholderSize: false,
+		forceHelperSize: false,
+		grid: false,
+		handle: false,
+		helper: "original",
+		items: "> *",
+		opacity: false,
+		placeholder: false,
+		revert: false,
+		scroll: true,
+		scrollSensitivity: 20,
+		scrollSpeed: 20,
+		scope: "default",
+		tolerance: "intersect",
+		zIndex: 1000,
+
+		// callbacks
+		activate: null,
+		beforeStop: null,
+		change: null,
+		deactivate: null,
+		out: null,
+		over: null,
+		receive: null,
+		remove: null,
+		sort: null,
+		start: null,
+		stop: null,
+		update: null
+	},
+
+	_isOverAxis: function( x, reference, size ) {
+		return ( x >= reference ) && ( x < ( reference + size ) );
+	},
+
+	_isFloating: function( item ) {
+		return (/left|right/).test(item.css("float")) || (/inline|table-cell/).test(item.css("display"));
+	},
+
+	_create: function() {
+		this.containerCache = {};
+		this.element.addClass("ui-sortable");
+
+		//Get the items
+		this.refresh();
+
+		//Let's determine the parent's offset
+		this.offset = this.element.offset();
+
+		//Initialize mouse events for interaction
+		this._mouseInit();
+
+		this._setHandleClassName();
+
+		//We're ready to go
+		this.ready = true;
+
+	},
+
+	_setOption: function( key, value ) {
+		this._super( key, value );
+
+		if ( key === "handle" ) {
+			this._setHandleClassName();
+		}
+	},
+
+	_setHandleClassName: function() {
+		this.element.find( ".ui-sortable-handle" ).removeClass( "ui-sortable-handle" );
+		$.each( this.items, function() {
+			( this.instance.options.handle ?
+				this.item.find( this.instance.options.handle ) : this.item )
+				.addClass( "ui-sortable-handle" );
+		});
+	},
+
+	_destroy: function() {
+		this.element
+			.removeClass( "ui-sortable ui-sortable-disabled" )
+			.find( ".ui-sortable-handle" )
+				.removeClass( "ui-sortable-handle" );
+		this._mouseDestroy();
+
+		for ( var i = this.items.length - 1; i >= 0; i-- ) {
+			this.items[i].item.removeData(this.widgetName + "-item");
+		}
+
+		return this;
+	},
+
+	_mouseCapture: function(event, overrideHandle) {
+		var currentItem = null,
+			validHandle = false,
+			that = this;
+
+		if (this.reverting) {
+			return false;
+		}
+
+		if(this.options.disabled || this.options.type === "static") {
+			return false;
+		}
+
+		//We have to refresh the items data once first
+		this._refreshItems(event);
+
+		//Find out if the clicked node (or one of its parents) is a actual item in this.items
+		$(event.target).parents().each(function() {
+			if($.data(this, that.widgetName + "-item") === that) {
+				currentItem = $(this);
+				return false;
+			}
+		});
+		if($.data(event.target, that.widgetName + "-item") === that) {
+			currentItem = $(event.target);
+		}
+
+		if(!currentItem) {
+			return false;
+		}
+		if(this.options.handle && !overrideHandle) {
+			$(this.options.handle, currentItem).find("*").addBack().each(function() {
+				if(this === event.target) {
+					validHandle = true;
+				}
+			});
+			if(!validHandle) {
+				return false;
+			}
+		}
+
+		this.currentItem = currentItem;
+		this._removeCurrentsFromItems();
+		return true;
+
+	},
+
+	_mouseStart: function(event, overrideHandle, noActivation) {
+
+		var i, body,
+			o = this.options;
+
+		this.currentContainer = this;
+
+		//We only need to call refreshPositions, because the refreshItems call has been moved to mouseCapture
+		this.refreshPositions();
+
+		//Create and append the visible helper
+		this.helper = this._createHelper(event);
+
+		//Cache the helper size
+		this._cacheHelperProportions();
+
+		/*
+		 * - Position generation -
+		 * This block generates everything position related - it's the core of draggables.
+		 */
+
+		//Cache the margins of the original element
+		this._cacheMargins();
+
+		//Get the next scrolling parent
+		this.scrollParent = this.helper.scrollParent();
+
+		//The element's absolute position on the page minus margins
+		this.offset = this.currentItem.offset();
+		this.offset = {
+			top: this.offset.top - this.margins.top,
+			left: this.offset.left - this.margins.left
+		};
+
+		$.extend(this.offset, {
+			click: { //Where the click happened, relative to the element
+				left: event.pageX - this.offset.left,
+				top: event.pageY - this.offset.top
+			},
+			parent: this._getParentOffset(),
+			relative: this._getRelativeOffset() //This is a relative to absolute position minus the actual position calculation - only used for relative positioned helper
+		});
+
+		// Only after we got the offset, we can change the helper's position to absolute
+		// TODO: Still need to figure out a way to make relative sorting possible
+		this.helper.css("position", "absolute");
+		this.cssPosition = this.helper.css("position");
+
+		//Generate the original position
+		this.originalPosition = this._generatePosition(event);
+		this.originalPageX = event.pageX;
+		this.originalPageY = event.pageY;
+
+		//Adjust the mouse offset relative to the helper if "cursorAt" is supplied
+		(o.cursorAt && this._adjustOffsetFromHelper(o.cursorAt));
+
+		//Cache the former DOM position
+		this.domPosition = { prev: this.currentItem.prev()[0], parent: this.currentItem.parent()[0] };
+
+		//If the helper is not the original, hide the original so it's not playing any role during the drag, won't cause anything bad this way
+		if(this.helper[0] !== this.currentItem[0]) {
+			this.currentItem.hide();
+		}
+
+		//Create the placeholder
+		this._createPlaceholder();
+
+		//Set a containment if given in the options
+		if(o.containment) {
+			this._setContainment();
+		}
+
+		if( o.cursor && o.cursor !== "auto" ) { // cursor option
+			body = this.document.find( "body" );
+
+			// support: IE
+			this.storedCursor = body.css( "cursor" );
+			body.css( "cursor", o.cursor );
+
+			this.storedStylesheet = $( "<style>*{ cursor: "+o.cursor+" !important; }</style>" ).appendTo( body );
+		}
+
+		if(o.opacity) { // opacity option
+			if (this.helper.css("opacity")) {
+				this._storedOpacity = this.helper.css("opacity");
+			}
+			this.helper.css("opacity", o.opacity);
+		}
+
+		if(o.zIndex) { // zIndex option
+			if (this.helper.css("zIndex")) {
+				this._storedZIndex = this.helper.css("zIndex");
+			}
+			this.helper.css("zIndex", o.zIndex);
+		}
+
+		//Prepare scrolling
+		if(this.scrollParent[0] !== this.document[0] && this.scrollParent[0].tagName !== "HTML") {
+			this.overflowOffset = this.scrollParent.offset();
+		}
+
+		//Call callbacks
+		this._trigger("start", event, this._uiHash());
+
+		//Recache the helper size
+		if(!this._preserveHelperProportions) {
+			this._cacheHelperProportions();
+		}
+
+
+		//Post "activate" events to possible containers
+		if( !noActivation ) {
+			for ( i = this.containers.length - 1; i >= 0; i-- ) {
+				this.containers[ i ]._trigger( "activate", event, this._uiHash( this ) );
+			}
+		}
+
+		//Prepare possible droppables
+		if($.ui.ddmanager) {
+			$.ui.ddmanager.current = this;
+		}
+
+		if ($.ui.ddmanager && !o.dropBehaviour) {
+			$.ui.ddmanager.prepareOffsets(this, event);
+		}
+
+		this.dragging = true;
+
+		this.helper.addClass("ui-sortable-helper");
+		this._mouseDrag(event); //Execute the drag once - this causes the helper not to be visible before getting its correct position
+		return true;
+
+	},
+
+	_mouseDrag: function(event) {
+		var i, item, itemElement, intersection,
+			o = this.options,
+			scrolled = false;
+
+		//Compute the helpers position
+		this.position = this._generatePosition(event);
+		this.positionAbs = this._convertPositionTo("absolute");
+
+		if (!this.lastPositionAbs) {
+			this.lastPositionAbs = this.positionAbs;
+		}
+
+		//Do scrolling
+		if(this.options.scroll) {
+			if(this.scrollParent[0] !== this.document[0] && this.scrollParent[0].tagName !== "HTML") {
+
+				if((this.overflowOffset.top + this.scrollParent[0].offsetHeight) - event.pageY < o.scrollSensitivity) {
+					this.scrollParent[0].scrollTop = scrolled = this.scrollParent[0].scrollTop + o.scrollSpeed;
+				} else if(event.pageY - this.overflowOffset.top < o.scrollSensitivity) {
+					this.scrollParent[0].scrollTop = scrolled = this.scrollParent[0].scrollTop - o.scrollSpeed;
+				}
+
+				if((this.overflowOffset.left + this.scrollParent[0].offsetWidth) - event.pageX < o.scrollSensitivity) {
+					this.scrollParent[0].scrollLeft = scrolled = this.scrollParent[0].scrollLeft + o.scrollSpeed;
+				} else if(event.pageX - this.overflowOffset.left < o.scrollSensitivity) {
+					this.scrollParent[0].scrollLeft = scrolled = this.scrollParent[0].scrollLeft - o.scrollSpeed;
+				}
+
+			} else {
+
+				if(event.pageY - this.document.scrollTop() < o.scrollSensitivity) {
+					scrolled = this.document.scrollTop(this.document.scrollTop() - o.scrollSpeed);
+				} else if(this.window.height() - (event.pageY - this.document.scrollTop()) < o.scrollSensitivity) {
+					scrolled = this.document.scrollTop(this.document.scrollTop() + o.scrollSpeed);
+				}
+
+				if(event.pageX - this.document.scrollLeft() < o.scrollSensitivity) {
+					scrolled = this.document.scrollLeft(this.document.scrollLeft() - o.scrollSpeed);
+				} else if(this.window.width() - (event.pageX - this.document.scrollLeft()) < o.scrollSensitivity) {
+					scrolled = this.document.scrollLeft(this.document.scrollLeft() + o.scrollSpeed);
+				}
+
+			}
+
+			if(scrolled !== false && $.ui.ddmanager && !o.dropBehaviour) {
+				$.ui.ddmanager.prepareOffsets(this, event);
+			}
+		}
+
+		//Regenerate the absolute position used for position checks
+		this.positionAbs = this._convertPositionTo("absolute");
+
+		//Set the helper position
+		if(!this.options.axis || this.options.axis !== "y") {
+			this.helper[0].style.left = this.position.left+"px";
+		}
+		if(!this.options.axis || this.options.axis !== "x") {
+			this.helper[0].style.top = this.position.top+"px";
+		}
+
+		//Rearrange
+		for (i = this.items.length - 1; i >= 0; i--) {
+
+			//Cache variables and intersection, continue if no intersection
+			item = this.items[i];
+			itemElement = item.item[0];
+			intersection = this._intersectsWithPointer(item);
+			if (!intersection) {
+				continue;
+			}
+
+			// Only put the placeholder inside the current Container, skip all
+			// items from other containers. This works because when moving
+			// an item from one container to another the
+			// currentContainer is switched before the placeholder is moved.
+			//
+			// Without this, moving items in "sub-sortables" can cause
+			// the placeholder to jitter between the outer and inner container.
+			if (item.instance !== this.currentContainer) {
+				continue;
+			}
+
+			// cannot intersect with itself
+			// no useless actions that have been done before
+			// no action if the item moved is the parent of the item checked
+			if (itemElement !== this.currentItem[0] &&
+				this.placeholder[intersection === 1 ? "next" : "prev"]()[0] !== itemElement &&
+				!$.contains(this.placeholder[0], itemElement) &&
+				(this.options.type === "semi-dynamic" ? !$.contains(this.element[0], itemElement) : true)
+			) {
+
+				this.direction = intersection === 1 ? "down" : "up";
+
+				if (this.options.tolerance === "pointer" || this._intersectsWithSides(item)) {
+					this._rearrange(event, item);
+				} else {
+					break;
+				}
+
+				this._trigger("change", event, this._uiHash());
+				break;
+			}
+		}
+
+		//Post events to containers
+		this._contactContainers(event);
+
+		//Interconnect with droppables
+		if($.ui.ddmanager) {
+			$.ui.ddmanager.drag(this, event);
+		}
+
+		//Call callbacks
+		this._trigger("sort", event, this._uiHash());
+
+		this.lastPositionAbs = this.positionAbs;
+		return false;
+
+	},
+
+	_mouseStop: function(event, noPropagation) {
+
+		if(!event) {
+			return;
+		}
+
+		//If we are using droppables, inform the manager about the drop
+		if ($.ui.ddmanager && !this.options.dropBehaviour) {
+			$.ui.ddmanager.drop(this, event);
+		}
+
+		if(this.options.revert) {
+			var that = this,
+				cur = this.placeholder.offset(),
+				axis = this.options.axis,
+				animation = {};
+
+			if ( !axis || axis === "x" ) {
+				animation.left = cur.left - this.offset.parent.left - this.margins.left + (this.offsetParent[0] === this.document[0].body ? 0 : this.offsetParent[0].scrollLeft);
+			}
+			if ( !axis || axis === "y" ) {
+				animation.top = cur.top - this.offset.parent.top - this.margins.top + (this.offsetParent[0] === this.document[0].body ? 0 : this.offsetParent[0].scrollTop);
+			}
+			this.reverting = true;
+			$(this.helper).animate( animation, parseInt(this.options.revert, 10) || 500, function() {
+				that._clear(event);
+			});
+		} else {
+			this._clear(event, noPropagation);
+		}
+
+		return false;
+
+	},
+
+	cancel: function() {
+
+		if(this.dragging) {
+
+			this._mouseUp({ target: null });
+
+			if(this.options.helper === "original") {
+				this.currentItem.css(this._storedCSS).removeClass("ui-sortable-helper");
+			} else {
+				this.currentItem.show();
+			}
+
+			//Post deactivating events to containers
+			for (var i = this.containers.length - 1; i >= 0; i--){
+				this.containers[i]._trigger("deactivate", null, this._uiHash(this));
+				if(this.containers[i].containerCache.over) {
+					this.containers[i]._trigger("out", null, this._uiHash(this));
+					this.containers[i].containerCache.over = 0;
+				}
+			}
+
+		}
+
+		if (this.placeholder) {
+			//$(this.placeholder[0]).remove(); would have been the jQuery way - unfortunately, it unbinds ALL events from the original node!
+			if(this.placeholder[0].parentNode) {
+				this.placeholder[0].parentNode.removeChild(this.placeholder[0]);
+			}
+			if(this.options.helper !== "original" && this.helper && this.helper[0].parentNode) {
+				this.helper.remove();
+			}
+
+			$.extend(this, {
+				helper: null,
+				dragging: false,
+				reverting: false,
+				_noFinalSort: null
+			});
+
+			if(this.domPosition.prev) {
+				$(this.domPosition.prev).after(this.currentItem);
+			} else {
+				$(this.domPosition.parent).prepend(this.currentItem);
+			}
+		}
+
+		return this;
+
+	},
+
+	serialize: function(o) {
+
+		var items = this._getItemsAsjQuery(o && o.connected),
+			str = [];
+		o = o || {};
+
+		$(items).each(function() {
+			var res = ($(o.item || this).attr(o.attribute || "id") || "").match(o.expression || (/(.+)[\-=_](.+)/));
+			if (res) {
+				str.push((o.key || res[1]+"[]")+"="+(o.key && o.expression ? res[1] : res[2]));
+			}
+		});
+
+		if(!str.length && o.key) {
+			str.push(o.key + "=");
+		}
+
+		return str.join("&");
+
+	},
+
+	toArray: function(o) {
+
+		var items = this._getItemsAsjQuery(o && o.connected),
+			ret = [];
+
+		o = o || {};
+
+		items.each(function() { ret.push($(o.item || this).attr(o.attribute || "id") || ""); });
+		return ret;
+
+	},
+
+	/* Be careful with the following core functions */
+	_intersectsWith: function(item) {
+
+		var x1 = this.positionAbs.left,
+			x2 = x1 + this.helperProportions.width,
+			y1 = this.positionAbs.top,
+			y2 = y1 + this.helperProportions.height,
+			l = item.left,
+			r = l + item.width,
+			t = item.top,
+			b = t + item.height,
+			dyClick = this.offset.click.top,
+			dxClick = this.offset.click.left,
+			isOverElementHeight = ( this.options.axis === "x" ) || ( ( y1 + dyClick ) > t && ( y1 + dyClick ) < b ),
+			isOverElementWidth = ( this.options.axis === "y" ) || ( ( x1 + dxClick ) > l && ( x1 + dxClick ) < r ),
+			isOverElement = isOverElementHeight && isOverElementWidth;
+
+		if ( this.options.tolerance === "pointer" ||
+			this.options.forcePointerForContainers ||
+			(this.options.tolerance !== "pointer" && this.helperProportions[this.floating ? "width" : "height"] > item[this.floating ? "width" : "height"])
+		) {
+			return isOverElement;
+		} else {
+
+			return (l < x1 + (this.helperProportions.width / 2) && // Right Half
+				x2 - (this.helperProportions.width / 2) < r && // Left Half
+				t < y1 + (this.helperProportions.height / 2) && // Bottom Half
+				y2 - (this.helperProportions.height / 2) < b ); // Top Half
+
+		}
+	},
+
+	_intersectsWithPointer: function(item) {
+
+		var isOverElementHeight = (this.options.axis === "x") || this._isOverAxis(this.positionAbs.top + this.offset.click.top, item.top, item.height),
+			isOverElementWidth = (this.options.axis === "y") || this._isOverAxis(this.positionAbs.left + this.offset.click.left, item.left, item.width),
+			isOverElement = isOverElementHeight && isOverElementWidth,
+			verticalDirection = this._getDragVerticalDirection(),
+			horizontalDirection = this._getDragHorizontalDirection();
+
+		if (!isOverElement) {
+			return false;
+		}
+
+		return this.floating ?
+			( ((horizontalDirection && horizontalDirection === "right") || verticalDirection === "down") ? 2 : 1 )
+			: ( verticalDirection && (verticalDirection === "down" ? 2 : 1) );
+
+	},
+
+	_intersectsWithSides: function(item) {
+
+		var isOverBottomHalf = this._isOverAxis(this.positionAbs.top + this.offset.click.top, item.top + (item.height/2), item.height),
+			isOverRightHalf = this._isOverAxis(this.positionAbs.left + this.offset.click.left, item.left + (item.width/2), item.width),
+			verticalDirection = this._getDragVerticalDirection(),
+			horizontalDirection = this._getDragHorizontalDirection();
+
+		if (this.floating && horizontalDirection) {
+			return ((horizontalDirection === "right" && isOverRightHalf) || (horizontalDirection === "left" && !isOverRightHalf));
+		} else {
+			return verticalDirection && ((verticalDirection === "down" && isOverBottomHalf) || (verticalDirection === "up" && !isOverBottomHalf));
+		}
+
+	},
+
+	_getDragVerticalDirection: function() {
+		var delta = this.positionAbs.top - this.lastPositionAbs.top;
+		return delta !== 0 && (delta > 0 ? "down" : "up");
+	},
+
+	_getDragHorizontalDirection: function() {
+		var delta = this.positionAbs.left - this.lastPositionAbs.left;
+		return delta !== 0 && (delta > 0 ? "right" : "left");
+	},
+
+	refresh: function(event) {
+		this._refreshItems(event);
+		this._setHandleClassName();
+		this.refreshPositions();
+		return this;
+	},
+
+	_connectWith: function() {
+		var options = this.options;
+		return options.connectWith.constructor === String ? [options.connectWith] : options.connectWith;
+	},
+
+	_getItemsAsjQuery: function(connected) {
+
+		var i, j, cur, inst,
+			items = [],
+			queries = [],
+			connectWith = this._connectWith();
+
+		if(connectWith && connected) {
+			for (i = connectWith.length - 1; i >= 0; i--){
+				cur = $(connectWith[i], this.document[0]);
+				for ( j = cur.length - 1; j >= 0; j--){
+					inst = $.data(cur[j], this.widgetFullName);
+					if(inst && inst !== this && !inst.options.disabled) {
+						queries.push([$.isFunction(inst.options.items) ? inst.options.items.call(inst.element) : $(inst.options.items, inst.element).not(".ui-sortable-helper").not(".ui-sortable-placeholder"), inst]);
+					}
+				}
+			}
+		}
+
+		queries.push([$.isFunction(this.options.items) ? this.options.items.call(this.element, null, { options: this.options, item: this.currentItem }) : $(this.options.items, this.element).not(".ui-sortable-helper").not(".ui-sortable-placeholder"), this]);
+
+		function addItems() {
+			items.push( this );
+		}
+		for (i = queries.length - 1; i >= 0; i--){
+			queries[i][0].each( addItems );
+		}
+
+		return $(items);
+
+	},
+
+	_removeCurrentsFromItems: function() {
+
+		var list = this.currentItem.find(":data(" + this.widgetName + "-item)");
+
+		this.items = $.grep(this.items, function (item) {
+			for (var j=0; j < list.length; j++) {
+				if(list[j] === item.item[0]) {
+					return false;
+				}
+			}
+			return true;
+		});
+
+	},
+
+	_refreshItems: function(event) {
+
+		this.items = [];
+		this.containers = [this];
+
+		var i, j, cur, inst, targetData, _queries, item, queriesLength,
+			items = this.items,
+			queries = [[$.isFunction(this.options.items) ? this.options.items.call(this.element[0], event, { item: this.currentItem }) : $(this.options.items, this.element), this]],
+			connectWith = this._connectWith();
+
+		if(connectWith && this.ready) { //Shouldn't be run the first time through due to massive slow-down
+			for (i = connectWith.length - 1; i >= 0; i--){
+				cur = $(connectWith[i], this.document[0]);
+				for (j = cur.length - 1; j >= 0; j--){
+					inst = $.data(cur[j], this.widgetFullName);
+					if(inst && inst !== this && !inst.options.disabled) {
+						queries.push([$.isFunction(inst.options.items) ? inst.options.items.call(inst.element[0], event, { item: this.currentItem }) : $(inst.options.items, inst.element), inst]);
+						this.containers.push(inst);
+					}
+				}
+			}
+		}
+
+		for (i = queries.length - 1; i >= 0; i--) {
+			targetData = queries[i][1];
+			_queries = queries[i][0];
+
+			for (j=0, queriesLength = _queries.length; j < queriesLength; j++) {
+				item = $(_queries[j]);
+
+				item.data(this.widgetName + "-item", targetData); // Data for target checking (mouse manager)
+
+				items.push({
+					item: item,
+					instance: targetData,
+					width: 0, height: 0,
+					left: 0, top: 0
+				});
+			}
+		}
+
+	},
+
+	refreshPositions: function(fast) {
+
+		// Determine whether items are being displayed horizontally
+		this.floating = this.items.length ?
+			this.options.axis === "x" || this._isFloating( this.items[ 0 ].item ) :
+			false;
+
+		//This has to be redone because due to the item being moved out/into the offsetParent, the offsetParent's position will change
+		if(this.offsetParent && this.helper) {
+			this.offset.parent = this._getParentOffset();
+		}
+
+		var i, item, t, p;
+
+		for (i = this.items.length - 1; i >= 0; i--){
+			item = this.items[i];
+
+			//We ignore calculating positions of all connected containers when we're not over them
+			if(item.instance !== this.currentContainer && this.currentContainer && item.item[0] !== this.currentItem[0]) {
+				continue;
+			}
+
+			t = this.options.toleranceElement ? $(this.options.toleranceElement, item.item) : item.item;
+
+			if (!fast) {
+				item.width = t.outerWidth();
+				item.height = t.outerHeight();
+			}
+
+			p = t.offset();
+			item.left = p.left;
+			item.top = p.top;
+		}
+
+		if(this.options.custom && this.options.custom.refreshContainers) {
+			this.options.custom.refreshContainers.call(this);
+		} else {
+			for (i = this.containers.length - 1; i >= 0; i--){
+				p = this.containers[i].element.offset();
+				this.containers[i].containerCache.left = p.left;
+				this.containers[i].containerCache.top = p.top;
+				this.containers[i].containerCache.width = this.containers[i].element.outerWidth();
+				this.containers[i].containerCache.height = this.containers[i].element.outerHeight();
+			}
+		}
+
+		return this;
+	},
+
+	_createPlaceholder: function(that) {
+		that = that || this;
+		var className,
+			o = that.options;
+
+		if(!o.placeholder || o.placeholder.constructor === String) {
+			className = o.placeholder;
+			o.placeholder = {
+				element: function() {
+
+					var nodeName = that.currentItem[0].nodeName.toLowerCase(),
+						element = $( "<" + nodeName + ">", that.document[0] )
+							.addClass(className || that.currentItem[0].className+" ui-sortable-placeholder")
+							.removeClass("ui-sortable-helper");
+
+					if ( nodeName === "tbody" ) {
+						that._createTrPlaceholder(
+							that.currentItem.find( "tr" ).eq( 0 ),
+							$( "<tr>", that.document[ 0 ] ).appendTo( element )
+						);
+					} else if ( nodeName === "tr" ) {
+						that._createTrPlaceholder( that.currentItem, element );
+					} else if ( nodeName === "img" ) {
+						element.attr( "src", that.currentItem.attr( "src" ) );
+					}
+
+					if ( !className ) {
+						element.css( "visibility", "hidden" );
+					}
+
+					return element;
+				},
+				update: function(container, p) {
+
+					// 1. If a className is set as 'placeholder option, we don't force sizes - the class is responsible for that
+					// 2. The option 'forcePlaceholderSize can be enabled to force it even if a class name is specified
+					if(className && !o.forcePlaceholderSize) {
+						return;
+					}
+
+					//If the element doesn't have a actual height by itself (without styles coming from a stylesheet), it receives the inline height from the dragged item
+					if(!p.height()) { p.height(that.currentItem.innerHeight() - parseInt(that.currentItem.css("paddingTop")||0, 10) - parseInt(that.currentItem.css("paddingBottom")||0, 10)); }
+					if(!p.width()) { p.width(that.currentItem.innerWidth() - parseInt(that.currentItem.css("paddingLeft")||0, 10) - parseInt(that.currentItem.css("paddingRight")||0, 10)); }
+				}
+			};
+		}
+
+		//Create the placeholder
+		that.placeholder = $(o.placeholder.element.call(that.element, that.currentItem));
+
+		//Append it after the actual current item
+		that.currentItem.after(that.placeholder);
+
+		//Update the size of the placeholder (TODO: Logic to fuzzy, see line 316/317)
+		o.placeholder.update(that, that.placeholder);
+
+	},
+
+	_createTrPlaceholder: function( sourceTr, targetTr ) {
+		var that = this;
+
+		sourceTr.children().each(function() {
+			$( "<td>&#160;</td>", that.document[ 0 ] )
+				.attr( "colspan", $( this ).attr( "colspan" ) || 1 )
+				.appendTo( targetTr );
+		});
+	},
+
+	_contactContainers: function(event) {
+		var i, j, dist, itemWithLeastDistance, posProperty, sizeProperty, cur, nearBottom, floating, axis,
+			innermostContainer = null,
+			innermostIndex = null;
+
+		// get innermost container that intersects with item
+		for (i = this.containers.length - 1; i >= 0; i--) {
+
+			// never consider a container that's located within the item itself
+			if($.contains(this.currentItem[0], this.containers[i].element[0])) {
+				continue;
+			}
+
+			if(this._intersectsWith(this.containers[i].containerCache)) {
+
+				// if we've already found a container and it's more "inner" than this, then continue
+				if(innermostContainer && $.contains(this.containers[i].element[0], innermostContainer.element[0])) {
+					continue;
+				}
+
+				innermostContainer = this.containers[i];
+				innermostIndex = i;
+
+			} else {
+				// container doesn't intersect. trigger "out" event if necessary
+				if(this.containers[i].containerCache.over) {
+					this.containers[i]._trigger("out", event, this._uiHash(this));
+					this.containers[i].containerCache.over = 0;
+				}
+			}
+
+		}
+
+		// if no intersecting containers found, return
+		if(!innermostContainer) {
+			return;
+		}
+
+		// move the item into the container if it's not there already
+		if(this.containers.length === 1) {
+			if (!this.containers[innermostIndex].containerCache.over) {
+				this.containers[innermostIndex]._trigger("over", event, this._uiHash(this));
+				this.containers[innermostIndex].containerCache.over = 1;
+			}
+		} else {
+
+			//When entering a new container, we will find the item with the least distance and append our item near it
+			dist = 10000;
+			itemWithLeastDistance = null;
+			floating = innermostContainer.floating || this._isFloating(this.currentItem);
+			posProperty = floating ? "left" : "top";
+			sizeProperty = floating ? "width" : "height";
+			axis = floating ? "clientX" : "clientY";
+
+			for (j = this.items.length - 1; j >= 0; j--) {
+				if(!$.contains(this.containers[innermostIndex].element[0], this.items[j].item[0])) {
+					continue;
+				}
+				if(this.items[j].item[0] === this.currentItem[0]) {
+					continue;
+				}
+
+				cur = this.items[j].item.offset()[posProperty];
+				nearBottom = false;
+				if ( event[ axis ] - cur > this.items[ j ][ sizeProperty ] / 2 ) {
+					nearBottom = true;
+				}
+
+				if ( Math.abs( event[ axis ] - cur ) < dist ) {
+					dist = Math.abs( event[ axis ] - cur );
+					itemWithLeastDistance = this.items[ j ];
+					this.direction = nearBottom ? "up": "down";
+				}
+			}
+
+			//Check if dropOnEmpty is enabled
+			if(!itemWithLeastDistance && !this.options.dropOnEmpty) {
+				return;
+			}
+
+			if(this.currentContainer === this.containers[innermostIndex]) {
+				if ( !this.currentContainer.containerCache.over ) {
+					this.containers[ innermostIndex ]._trigger( "over", event, this._uiHash() );
+					this.currentContainer.containerCache.over = 1;
+				}
+				return;
+			}
+
+			itemWithLeastDistance ? this._rearrange(event, itemWithLeastDistance, null, true) : this._rearrange(event, null, this.containers[innermostIndex].element, true);
+			this._trigger("change", event, this._uiHash());
+			this.containers[innermostIndex]._trigger("change", event, this._uiHash(this));
+			this.currentContainer = this.containers[innermostIndex];
+
+			//Update the placeholder
+			this.options.placeholder.update(this.currentContainer, this.placeholder);
+
+			this.containers[innermostIndex]._trigger("over", event, this._uiHash(this));
+			this.containers[innermostIndex].containerCache.over = 1;
+		}
+
+
+	},
+
+	_createHelper: function(event) {
+
+		var o = this.options,
+			helper = $.isFunction(o.helper) ? $(o.helper.apply(this.element[0], [event, this.currentItem])) : (o.helper === "clone" ? this.currentItem.clone() : this.currentItem);
+
+		//Add the helper to the DOM if that didn't happen already
+		if(!helper.parents("body").length) {
+			$(o.appendTo !== "parent" ? o.appendTo : this.currentItem[0].parentNode)[0].appendChild(helper[0]);
+		}
+
+		if(helper[0] === this.currentItem[0]) {
+			this._storedCSS = { width: this.currentItem[0].style.width, height: this.currentItem[0].style.height, position: this.currentItem.css("position"), top: this.currentItem.css("top"), left: this.currentItem.css("left") };
+		}
+
+		if(!helper[0].style.width || o.forceHelperSize) {
+			helper.width(this.currentItem.width());
+		}
+		if(!helper[0].style.height || o.forceHelperSize) {
+			helper.height(this.currentItem.height());
+		}
+
+		return helper;
+
+	},
+
+	_adjustOffsetFromHelper: function(obj) {
+		if (typeof obj === "string") {
+			obj = obj.split(" ");
+		}
+		if ($.isArray(obj)) {
+			obj = {left: +obj[0], top: +obj[1] || 0};
+		}
+		if ("left" in obj) {
+			this.offset.click.left = obj.left + this.margins.left;
+		}
+		if ("right" in obj) {
+			this.offset.click.left = this.helperProportions.width - obj.right + this.margins.left;
+		}
+		if ("top" in obj) {
+			this.offset.click.top = obj.top + this.margins.top;
+		}
+		if ("bottom" in obj) {
+			this.offset.click.top = this.helperProportions.height - obj.bottom + this.margins.top;
+		}
+	},
+
+	_getParentOffset: function() {
+
+
+		//Get the offsetParent and cache its position
+		this.offsetParent = this.helper.offsetParent();
+		var po = this.offsetParent.offset();
+
+		// This is a special case where we need to modify a offset calculated on start, since the following happened:
+		// 1. The position of the helper is absolute, so it's position is calculated based on the next positioned parent
+		// 2. The actual offset parent is a child of the scroll parent, and the scroll parent isn't the document, which means that
+		//    the scroll is included in the initial calculation of the offset of the parent, and never recalculated upon drag
+		if(this.cssPosition === "absolute" && this.scrollParent[0] !== this.document[0] && $.contains(this.scrollParent[0], this.offsetParent[0])) {
+			po.left += this.scrollParent.scrollLeft();
+			po.top += this.scrollParent.scrollTop();
+		}
+
+		// This needs to be actually done for all browsers, since pageX/pageY includes this information
+		// with an ugly IE fix
+		if( this.offsetParent[0] === this.document[0].body || (this.offsetParent[0].tagName && this.offsetParent[0].tagName.toLowerCase() === "html" && $.ui.ie)) {
+			po = { top: 0, left: 0 };
+		}
+
+		return {
+			top: po.top + (parseInt(this.offsetParent.css("borderTopWidth"),10) || 0),
+			left: po.left + (parseInt(this.offsetParent.css("borderLeftWidth"),10) || 0)
+		};
+
+	},
+
+	_getRelativeOffset: function() {
+
+		if(this.cssPosition === "relative") {
+			var p = this.currentItem.position();
+			return {
+				top: p.top - (parseInt(this.helper.css("top"),10) || 0) + this.scrollParent.scrollTop(),
+				left: p.left - (parseInt(this.helper.css("left"),10) || 0) + this.scrollParent.scrollLeft()
+			};
+		} else {
+			return { top: 0, left: 0 };
+		}
+
+	},
+
+	_cacheMargins: function() {
+		this.margins = {
+			left: (parseInt(this.currentItem.css("marginLeft"),10) || 0),
+			top: (parseInt(this.currentItem.css("marginTop"),10) || 0)
+		};
+	},
+
+	_cacheHelperProportions: function() {
+		this.helperProportions = {
+			width: this.helper.outerWidth(),
+			height: this.helper.outerHeight()
+		};
+	},
+
+	_setContainment: function() {
+
+		var ce, co, over,
+			o = this.options;
+		if(o.containment === "parent") {
+			o.containment = this.helper[0].parentNode;
+		}
+		if(o.containment === "document" || o.containment === "window") {
+			this.containment = [
+				0 - this.offset.relative.left - this.offset.parent.left,
+				0 - this.offset.relative.top - this.offset.parent.top,
+				o.containment === "document" ? this.document.width() : this.window.width() - this.helperProportions.width - this.margins.left,
+				(o.containment === "document" ? this.document.width() : this.window.height() || this.document[0].body.parentNode.scrollHeight) - this.helperProportions.height - this.margins.top
+			];
+		}
+
+		if(!(/^(document|window|parent)$/).test(o.containment)) {
+			ce = $(o.containment)[0];
+			co = $(o.containment).offset();
+			over = ($(ce).css("overflow") !== "hidden");
+
+			this.containment = [
+				co.left + (parseInt($(ce).css("borderLeftWidth"),10) || 0) + (parseInt($(ce).css("paddingLeft"),10) || 0) - this.margins.left,
+				co.top + (parseInt($(ce).css("borderTopWidth"),10) || 0) + (parseInt($(ce).css("paddingTop"),10) || 0) - this.margins.top,
+				co.left+(over ? Math.max(ce.scrollWidth,ce.offsetWidth) : ce.offsetWidth) - (parseInt($(ce).css("borderLeftWidth"),10) || 0) - (parseInt($(ce).css("paddingRight"),10) || 0) - this.helperProportions.width - this.margins.left,
+				co.top+(over ? Math.max(ce.scrollHeight,ce.offsetHeight) : ce.offsetHeight) - (parseInt($(ce).css("borderTopWidth"),10) || 0) - (parseInt($(ce).css("paddingBottom"),10) || 0) - this.helperProportions.height - this.margins.top
+			];
+		}
+
+	},
+
+	_convertPositionTo: function(d, pos) {
+
+		if(!pos) {
+			pos = this.position;
+		}
+		var mod = d === "absolute" ? 1 : -1,
+			scroll = this.cssPosition === "absolute" && !(this.scrollParent[0] !== this.document[0] && $.contains(this.scrollParent[0], this.offsetParent[0])) ? this.offsetParent : this.scrollParent,
+			scrollIsRootNode = (/(html|body)/i).test(scroll[0].tagName);
+
+		return {
+			top: (
+				pos.top	+																// The absolute mouse position
+				this.offset.relative.top * mod +										// Only for relative positioned nodes: Relative offset from element to offset parent
+				this.offset.parent.top * mod -											// The offsetParent's offset without borders (offset + border)
+				( ( this.cssPosition === "fixed" ? -this.scrollParent.scrollTop() : ( scrollIsRootNode ? 0 : scroll.scrollTop() ) ) * mod)
+			),
+			left: (
+				pos.left +																// The absolute mouse position
+				this.offset.relative.left * mod +										// Only for relative positioned nodes: Relative offset from element to offset parent
+				this.offset.parent.left * mod	-										// The offsetParent's offset without borders (offset + border)
+				( ( this.cssPosition === "fixed" ? -this.scrollParent.scrollLeft() : scrollIsRootNode ? 0 : scroll.scrollLeft() ) * mod)
+			)
+		};
+
+	},
+
+	_generatePosition: function(event) {
+
+		var top, left,
+			o = this.options,
+			pageX = event.pageX,
+			pageY = event.pageY,
+			scroll = this.cssPosition === "absolute" && !(this.scrollParent[0] !== this.document[0] && $.contains(this.scrollParent[0], this.offsetParent[0])) ? this.offsetParent : this.scrollParent, scrollIsRootNode = (/(html|body)/i).test(scroll[0].tagName);
+
+		// This is another very weird special case that only happens for relative elements:
+		// 1. If the css position is relative
+		// 2. and the scroll parent is the document or similar to the offset parent
+		// we have to refresh the relative offset during the scroll so there are no jumps
+		if(this.cssPosition === "relative" && !(this.scrollParent[0] !== this.document[0] && this.scrollParent[0] !== this.offsetParent[0])) {
+			this.offset.relative = this._getRelativeOffset();
+		}
+
+		/*
+		 * - Position constraining -
+		 * Constrain the position to a mix of grid, containment.
+		 */
+
+		if(this.originalPosition) { //If we are not dragging yet, we won't check for options
+
+			if(this.containment) {
+				if(event.pageX - this.offset.click.left < this.containment[0]) {
+					pageX = this.containment[0] + this.offset.click.left;
+				}
+				if(event.pageY - this.offset.click.top < this.containment[1]) {
+					pageY = this.containment[1] + this.offset.click.top;
+				}
+				if(event.pageX - this.offset.click.left > this.containment[2]) {
+					pageX = this.containment[2] + this.offset.click.left;
+				}
+				if(event.pageY - this.offset.click.top > this.containment[3]) {
+					pageY = this.containment[3] + this.offset.click.top;
+				}
+			}
+
+			if(o.grid) {
+				top = this.originalPageY + Math.round((pageY - this.originalPageY) / o.grid[1]) * o.grid[1];
+				pageY = this.containment ? ( (top - this.offset.click.top >= this.containment[1] && top - this.offset.click.top <= this.containment[3]) ? top : ((top - this.offset.click.top >= this.containment[1]) ? top - o.grid[1] : top + o.grid[1])) : top;
+
+				left = this.originalPageX + Math.round((pageX - this.originalPageX) / o.grid[0]) * o.grid[0];
+				pageX = this.containment ? ( (left - this.offset.click.left >= this.containment[0] && left - this.offset.click.left <= this.containment[2]) ? left : ((left - this.offset.click.left >= this.containment[0]) ? left - o.grid[0] : left + o.grid[0])) : left;
+			}
+
+		}
+
+		return {
+			top: (
+				pageY -																// The absolute mouse position
+				this.offset.click.top -													// Click offset (relative to the element)
+				this.offset.relative.top	-											// Only for relative positioned nodes: Relative offset from element to offset parent
+				this.offset.parent.top +												// The offsetParent's offset without borders (offset + border)
+				( ( this.cssPosition === "fixed" ? -this.scrollParent.scrollTop() : ( scrollIsRootNode ? 0 : scroll.scrollTop() ) ))
+			),
+			left: (
+				pageX -																// The absolute mouse position
+				this.offset.click.left -												// Click offset (relative to the element)
+				this.offset.relative.left	-											// Only for relative positioned nodes: Relative offset from element to offset parent
+				this.offset.parent.left +												// The offsetParent's offset without borders (offset + border)
+				( ( this.cssPosition === "fixed" ? -this.scrollParent.scrollLeft() : scrollIsRootNode ? 0 : scroll.scrollLeft() ))
+			)
+		};
+
+	},
+
+	_rearrange: function(event, i, a, hardRefresh) {
+
+		a ? a[0].appendChild(this.placeholder[0]) : i.item[0].parentNode.insertBefore(this.placeholder[0], (this.direction === "down" ? i.item[0] : i.item[0].nextSibling));
+
+		//Various things done here to improve the performance:
+		// 1. we create a setTimeout, that calls refreshPositions
+		// 2. on the instance, we have a counter variable, that get's higher after every append
+		// 3. on the local scope, we copy the counter variable, and check in the timeout, if it's still the same
+		// 4. this lets only the last addition to the timeout stack through
+		this.counter = this.counter ? ++this.counter : 1;
+		var counter = this.counter;
+
+		this._delay(function() {
+			if(counter === this.counter) {
+				this.refreshPositions(!hardRefresh); //Precompute after each DOM insertion, NOT on mousemove
+			}
+		});
+
+	},
+
+	_clear: function(event, noPropagation) {
+
+		this.reverting = false;
+		// We delay all events that have to be triggered to after the point where the placeholder has been removed and
+		// everything else normalized again
+		var i,
+			delayedTriggers = [];
+
+		// We first have to update the dom position of the actual currentItem
+		// Note: don't do it if the current item is already removed (by a user), or it gets reappended (see #4088)
+		if(!this._noFinalSort && this.currentItem.parent().length) {
+			this.placeholder.before(this.currentItem);
+		}
+		this._noFinalSort = null;
+
+		if(this.helper[0] === this.currentItem[0]) {
+			for(i in this._storedCSS) {
+				if(this._storedCSS[i] === "auto" || this._storedCSS[i] === "static") {
+					this._storedCSS[i] = "";
+				}
+			}
+			this.currentItem.css(this._storedCSS).removeClass("ui-sortable-helper");
+		} else {
+			this.currentItem.show();
+		}
+
+		if(this.fromOutside && !noPropagation) {
+			delayedTriggers.push(function(event) { this._trigger("receive", event, this._uiHash(this.fromOutside)); });
+		}
+		if((this.fromOutside || this.domPosition.prev !== this.currentItem.prev().not(".ui-sortable-helper")[0] || this.domPosition.parent !== this.currentItem.parent()[0]) && !noPropagation) {
+			delayedTriggers.push(function(event) { this._trigger("update", event, this._uiHash()); }); //Trigger update callback if the DOM position has changed
+		}
+
+		// Check if the items Container has Changed and trigger appropriate
+		// events.
+		if (this !== this.currentContainer) {
+			if(!noPropagation) {
+				delayedTriggers.push(function(event) { this._trigger("remove", event, this._uiHash()); });
+				delayedTriggers.push((function(c) { return function(event) { c._trigger("receive", event, this._uiHash(this)); };  }).call(this, this.currentContainer));
+				delayedTriggers.push((function(c) { return function(event) { c._trigger("update", event, this._uiHash(this));  }; }).call(this, this.currentContainer));
+			}
+		}
+
+
+		//Post events to containers
+		function delayEvent( type, instance, container ) {
+			return function( event ) {
+				container._trigger( type, event, instance._uiHash( instance ) );
+			};
+		}
+		for (i = this.containers.length - 1; i >= 0; i--){
+			if (!noPropagation) {
+				delayedTriggers.push( delayEvent( "deactivate", this, this.containers[ i ] ) );
+			}
+			if(this.containers[i].containerCache.over) {
+				delayedTriggers.push( delayEvent( "out", this, this.containers[ i ] ) );
+				this.containers[i].containerCache.over = 0;
+			}
+		}
+
+		//Do what was originally in plugins
+		if ( this.storedCursor ) {
+			this.document.find( "body" ).css( "cursor", this.storedCursor );
+			this.storedStylesheet.remove();
+		}
+		if(this._storedOpacity) {
+			this.helper.css("opacity", this._storedOpacity);
+		}
+		if(this._storedZIndex) {
+			this.helper.css("zIndex", this._storedZIndex === "auto" ? "" : this._storedZIndex);
+		}
+
+		this.dragging = false;
+
+		if(!noPropagation) {
+			this._trigger("beforeStop", event, this._uiHash());
+		}
+
+		//$(this.placeholder[0]).remove(); would have been the jQuery way - unfortunately, it unbinds ALL events from the original node!
+		this.placeholder[0].parentNode.removeChild(this.placeholder[0]);
+
+		if ( !this.cancelHelperRemoval ) {
+			if ( this.helper[ 0 ] !== this.currentItem[ 0 ] ) {
+				this.helper.remove();
+			}
+			this.helper = null;
+		}
+
+		if(!noPropagation) {
+			for (i=0; i < delayedTriggers.length; i++) {
+				delayedTriggers[i].call(this, event);
+			} //Trigger all delayed events
+			this._trigger("stop", event, this._uiHash());
+		}
+
+		this.fromOutside = false;
+		return !this.cancelHelperRemoval;
+
+	},
+
+	_trigger: function() {
+		if ($.Widget.prototype._trigger.apply(this, arguments) === false) {
+			this.cancel();
+		}
+	},
+
+	_uiHash: function(_inst) {
+		var inst = _inst || this;
+		return {
+			helper: inst.helper,
+			placeholder: inst.placeholder || $([]),
+			position: inst.position,
+			originalPosition: inst.originalPosition,
+			offset: inst.positionAbs,
+			item: inst.currentItem,
+			sender: _inst ? _inst.element : null
+		};
+	}
+
+});
+
+
+/*!
+ * jQuery UI Slider 1.11.4
+ * http://jqueryui.com
+ *
+ * Copyright jQuery Foundation and other contributors
+ * Released under the MIT license.
+ * http://jquery.org/license
+ *
+ * http://api.jqueryui.com/slider/
+ */
+
+
+var slider = $.widget( "ui.slider", $.ui.mouse, {
+	version: "1.11.4",
+	widgetEventPrefix: "slide",
+
+	options: {
+		animate: false,
+		distance: 0,
+		max: 100,
+		min: 0,
+		orientation: "horizontal",
+		range: false,
+		step: 1,
+		value: 0,
+		values: null,
+
+		// callbacks
+		change: null,
+		slide: null,
+		start: null,
+		stop: null
+	},
+
+	// number of pages in a slider
+	// (how many times can you page up/down to go through the whole range)
+	numPages: 5,
+
+	_create: function() {
+		this._keySliding = false;
+		this._mouseSliding = false;
+		this._animateOff = true;
+		this._handleIndex = null;
+		this._detectOrientation();
+		this._mouseInit();
+		this._calculateNewMax();
+
+		this.element
+			.addClass( "ui-slider" +
+				" ui-slider-" + this.orientation +
+				" ui-widget" +
+				" ui-widget-content" +
+				" ui-corner-all");
+
+		this._refresh();
+		this._setOption( "disabled", this.options.disabled );
+
+		this._animateOff = false;
+	},
+
+	_refresh: function() {
+		this._createRange();
+		this._createHandles();
+		this._setupEvents();
+		this._refreshValue();
+	},
+
+	_createHandles: function() {
+		var i, handleCount,
+			options = this.options,
+			existingHandles = this.element.find( ".ui-slider-handle" ).addClass( "ui-state-default ui-corner-all" ),
+			handle = "<span class='ui-slider-handle ui-state-default ui-corner-all' tabindex='0'></span>",
+			handles = [];
+
+		handleCount = ( options.values && options.values.length ) || 1;
+
+		if ( existingHandles.length > handleCount ) {
+			existingHandles.slice( handleCount ).remove();
+			existingHandles = existingHandles.slice( 0, handleCount );
+		}
+
+		for ( i = existingHandles.length; i < handleCount; i++ ) {
+			handles.push( handle );
+		}
+
+		this.handles = existingHandles.add( $( handles.join( "" ) ).appendTo( this.element ) );
+
+		this.handle = this.handles.eq( 0 );
+
+		this.handles.each(function( i ) {
+			$( this ).data( "ui-slider-handle-index", i );
+		});
+	},
+
+	_createRange: function() {
+		var options = this.options,
+			classes = "";
+
+		if ( options.range ) {
+			if ( options.range === true ) {
+				if ( !options.values ) {
+					options.values = [ this._valueMin(), this._valueMin() ];
+				} else if ( options.values.length && options.values.length !== 2 ) {
+					options.values = [ options.values[0], options.values[0] ];
+				} else if ( $.isArray( options.values ) ) {
+					options.values = options.values.slice(0);
+				}
+			}
+
+			if ( !this.range || !this.range.length ) {
+				this.range = $( "<div></div>" )
+					.appendTo( this.element );
+
+				classes = "ui-slider-range" +
+				// note: this isn't the most fittingly semantic framework class for this element,
+				// but worked best visually with a variety of themes
+				" ui-widget-header ui-corner-all";
+			} else {
+				this.range.removeClass( "ui-slider-range-min ui-slider-range-max" )
+					// Handle range switching from true to min/max
+					.css({
+						"left": "",
+						"bottom": ""
+					});
+			}
+
+			this.range.addClass( classes +
+				( ( options.range === "min" || options.range === "max" ) ? " ui-slider-range-" + options.range : "" ) );
+		} else {
+			if ( this.range ) {
+				this.range.remove();
+			}
+			this.range = null;
+		}
+	},
+
+	_setupEvents: function() {
+		this._off( this.handles );
+		this._on( this.handles, this._handleEvents );
+		this._hoverable( this.handles );
+		this._focusable( this.handles );
+	},
+
+	_destroy: function() {
+		this.handles.remove();
+		if ( this.range ) {
+			this.range.remove();
+		}
+
+		this.element
+			.removeClass( "ui-slider" +
+				" ui-slider-horizontal" +
+				" ui-slider-vertical" +
+				" ui-widget" +
+				" ui-widget-content" +
+				" ui-corner-all" );
+
+		this._mouseDestroy();
+	},
+
+	_mouseCapture: function( event ) {
+		var position, normValue, distance, closestHandle, index, allowed, offset, mouseOverHandle,
+			that = this,
+			o = this.options;
+
+		if ( o.disabled ) {
+			return false;
+		}
+
+		this.elementSize = {
+			width: this.element.outerWidth(),
+			height: this.element.outerHeight()
+		};
+		this.elementOffset = this.element.offset();
+
+		position = { x: event.pageX, y: event.pageY };
+		normValue = this._normValueFromMouse( position );
+		distance = this._valueMax() - this._valueMin() + 1;
+		this.handles.each(function( i ) {
+			var thisDistance = Math.abs( normValue - that.values(i) );
+			if (( distance > thisDistance ) ||
+				( distance === thisDistance &&
+					(i === that._lastChangedValue || that.values(i) === o.min ))) {
+				distance = thisDistance;
+				closestHandle = $( this );
+				index = i;
+			}
+		});
+
+		allowed = this._start( event, index );
+		if ( allowed === false ) {
+			return false;
+		}
+		this._mouseSliding = true;
+
+		this._handleIndex = index;
+
+		closestHandle
+			.addClass( "ui-state-active" )
+			.focus();
+
+		offset = closestHandle.offset();
+		mouseOverHandle = !$( event.target ).parents().addBack().is( ".ui-slider-handle" );
+		this._clickOffset = mouseOverHandle ? { left: 0, top: 0 } : {
+			left: event.pageX - offset.left - ( closestHandle.width() / 2 ),
+			top: event.pageY - offset.top -
+				( closestHandle.height() / 2 ) -
+				( parseInt( closestHandle.css("borderTopWidth"), 10 ) || 0 ) -
+				( parseInt( closestHandle.css("borderBottomWidth"), 10 ) || 0) +
+				( parseInt( closestHandle.css("marginTop"), 10 ) || 0)
+		};
+
+		if ( !this.handles.hasClass( "ui-state-hover" ) ) {
+			this._slide( event, index, normValue );
+		}
+		this._animateOff = true;
+		return true;
+	},
+
+	_mouseStart: function() {
+		return true;
+	},
+
+	_mouseDrag: function( event ) {
+		var position = { x: event.pageX, y: event.pageY },
+			normValue = this._normValueFromMouse( position );
+
+		this._slide( event, this._handleIndex, normValue );
+
+		return false;
+	},
+
+	_mouseStop: function( event ) {
+		this.handles.removeClass( "ui-state-active" );
+		this._mouseSliding = false;
+
+		this._stop( event, this._handleIndex );
+		this._change( event, this._handleIndex );
+
+		this._handleIndex = null;
+		this._clickOffset = null;
+		this._animateOff = false;
+
+		return false;
+	},
+
+	_detectOrientation: function() {
+		this.orientation = ( this.options.orientation === "vertical" ) ? "vertical" : "horizontal";
+	},
+
+	_normValueFromMouse: function( position ) {
+		var pixelTotal,
+			pixelMouse,
+			percentMouse,
+			valueTotal,
+			valueMouse;
+
+		if ( this.orientation === "horizontal" ) {
+			pixelTotal = this.elementSize.width;
+			pixelMouse = position.x - this.elementOffset.left - ( this._clickOffset ? this._clickOffset.left : 0 );
+		} else {
+			pixelTotal = this.elementSize.height;
+			pixelMouse = position.y - this.elementOffset.top - ( this._clickOffset ? this._clickOffset.top : 0 );
+		}
+
+		percentMouse = ( pixelMouse / pixelTotal );
+		if ( percentMouse > 1 ) {
+			percentMouse = 1;
+		}
+		if ( percentMouse < 0 ) {
+			percentMouse = 0;
+		}
+		if ( this.orientation === "vertical" ) {
+			percentMouse = 1 - percentMouse;
+		}
+
+		valueTotal = this._valueMax() - this._valueMin();
+		valueMouse = this._valueMin() + percentMouse * valueTotal;
+
+		return this._trimAlignValue( valueMouse );
+	},
+
+	_start: function( event, index ) {
+		var uiHash = {
+			handle: this.handles[ index ],
+			value: this.value()
+		};
+		if ( this.options.values && this.options.values.length ) {
+			uiHash.value = this.values( index );
+			uiHash.values = this.values();
+		}
+		return this._trigger( "start", event, uiHash );
+	},
+
+	_slide: function( event, index, newVal ) {
+		var otherVal,
+			newValues,
+			allowed;
+
+		if ( this.options.values && this.options.values.length ) {
+			otherVal = this.values( index ? 0 : 1 );
+
+			if ( ( this.options.values.length === 2 && this.options.range === true ) &&
+					( ( index === 0 && newVal > otherVal) || ( index === 1 && newVal < otherVal ) )
+				) {
+				newVal = otherVal;
+			}
+
+			if ( newVal !== this.values( index ) ) {
+				newValues = this.values();
+				newValues[ index ] = newVal;
+				// A slide can be canceled by returning false from the slide callback
+				allowed = this._trigger( "slide", event, {
+					handle: this.handles[ index ],
+					value: newVal,
+					values: newValues
+				} );
+				otherVal = this.values( index ? 0 : 1 );
+				if ( allowed !== false ) {
+					this.values( index, newVal );
+				}
+			}
+		} else {
+			if ( newVal !== this.value() ) {
+				// A slide can be canceled by returning false from the slide callback
+				allowed = this._trigger( "slide", event, {
+					handle: this.handles[ index ],
+					value: newVal
+				} );
+				if ( allowed !== false ) {
+					this.value( newVal );
+				}
+			}
+		}
+	},
+
+	_stop: function( event, index ) {
+		var uiHash = {
+			handle: this.handles[ index ],
+			value: this.value()
+		};
+		if ( this.options.values && this.options.values.length ) {
+			uiHash.value = this.values( index );
+			uiHash.values = this.values();
+		}
+
+		this._trigger( "stop", event, uiHash );
+	},
+
+	_change: function( event, index ) {
+		if ( !this._keySliding && !this._mouseSliding ) {
+			var uiHash = {
+				handle: this.handles[ index ],
+				value: this.value()
+			};
+			if ( this.options.values && this.options.values.length ) {
+				uiHash.value = this.values( index );
+				uiHash.values = this.values();
+			}
+
+			//store the last changed value index for reference when handles overlap
+			this._lastChangedValue = index;
+
+			this._trigger( "change", event, uiHash );
+		}
+	},
+
+	value: function( newValue ) {
+		if ( arguments.length ) {
+			this.options.value = this._trimAlignValue( newValue );
+			this._refreshValue();
+			this._change( null, 0 );
+			return;
+		}
+
+		return this._value();
+	},
+
+	values: function( index, newValue ) {
+		var vals,
+			newValues,
+			i;
+
+		if ( arguments.length > 1 ) {
+			this.options.values[ index ] = this._trimAlignValue( newValue );
+			this._refreshValue();
+			this._change( null, index );
+			return;
+		}
+
+		if ( arguments.length ) {
+			if ( $.isArray( arguments[ 0 ] ) ) {
+				vals = this.options.values;
+				newValues = arguments[ 0 ];
+				for ( i = 0; i < vals.length; i += 1 ) {
+					vals[ i ] = this._trimAlignValue( newValues[ i ] );
+					this._change( null, i );
+				}
+				this._refreshValue();
+			} else {
+				if ( this.options.values && this.options.values.length ) {
+					return this._values( index );
+				} else {
+					return this.value();
+				}
+			}
+		} else {
+			return this._values();
+		}
+	},
+
+	_setOption: function( key, value ) {
+		var i,
+			valsLength = 0;
+
+		if ( key === "range" && this.options.range === true ) {
+			if ( value === "min" ) {
+				this.options.value = this._values( 0 );
+				this.options.values = null;
+			} else if ( value === "max" ) {
+				this.options.value = this._values( this.options.values.length - 1 );
+				this.options.values = null;
+			}
+		}
+
+		if ( $.isArray( this.options.values ) ) {
+			valsLength = this.options.values.length;
+		}
+
+		if ( key === "disabled" ) {
+			this.element.toggleClass( "ui-state-disabled", !!value );
+		}
+
+		this._super( key, value );
+
+		switch ( key ) {
+			case "orientation":
+				this._detectOrientation();
+				this.element
+					.removeClass( "ui-slider-horizontal ui-slider-vertical" )
+					.addClass( "ui-slider-" + this.orientation );
+				this._refreshValue();
+
+				// Reset positioning from previous orientation
+				this.handles.css( value === "horizontal" ? "bottom" : "left", "" );
+				break;
+			case "value":
+				this._animateOff = true;
+				this._refreshValue();
+				this._change( null, 0 );
+				this._animateOff = false;
+				break;
+			case "values":
+				this._animateOff = true;
+				this._refreshValue();
+				for ( i = 0; i < valsLength; i += 1 ) {
+					this._change( null, i );
+				}
+				this._animateOff = false;
+				break;
+			case "step":
+			case "min":
+			case "max":
+				this._animateOff = true;
+				this._calculateNewMax();
+				this._refreshValue();
+				this._animateOff = false;
+				break;
+			case "range":
+				this._animateOff = true;
+				this._refresh();
+				this._animateOff = false;
+				break;
+		}
+	},
+
+	//internal value getter
+	// _value() returns value trimmed by min and max, aligned by step
+	_value: function() {
+		var val = this.options.value;
+		val = this._trimAlignValue( val );
+
+		return val;
+	},
+
+	//internal values getter
+	// _values() returns array of values trimmed by min and max, aligned by step
+	// _values( index ) returns single value trimmed by min and max, aligned by step
+	_values: function( index ) {
+		var val,
+			vals,
+			i;
+
+		if ( arguments.length ) {
+			val = this.options.values[ index ];
+			val = this._trimAlignValue( val );
+
+			return val;
+		} else if ( this.options.values && this.options.values.length ) {
+			// .slice() creates a copy of the array
+			// this copy gets trimmed by min and max and then returned
+			vals = this.options.values.slice();
+			for ( i = 0; i < vals.length; i += 1) {
+				vals[ i ] = this._trimAlignValue( vals[ i ] );
+			}
+
+			return vals;
+		} else {
+			return [];
+		}
+	},
+
+	// returns the step-aligned value that val is closest to, between (inclusive) min and max
+	_trimAlignValue: function( val ) {
+		if ( val <= this._valueMin() ) {
+			return this._valueMin();
+		}
+		if ( val >= this._valueMax() ) {
+			return this._valueMax();
+		}
+		var step = ( this.options.step > 0 ) ? this.options.step : 1,
+			valModStep = (val - this._valueMin()) % step,
+			alignValue = val - valModStep;
+
+		if ( Math.abs(valModStep) * 2 >= step ) {
+			alignValue += ( valModStep > 0 ) ? step : ( -step );
+		}
+
+		// Since JavaScript has problems with large floats, round
+		// the final value to 5 digits after the decimal point (see #4124)
+		return parseFloat( alignValue.toFixed(5) );
+	},
+
+	_calculateNewMax: function() {
+		var max = this.options.max,
+			min = this._valueMin(),
+			step = this.options.step,
+			aboveMin = Math.floor( ( +( max - min ).toFixed( this._precision() ) ) / step ) * step;
+		max = aboveMin + min;
+		this.max = parseFloat( max.toFixed( this._precision() ) );
+	},
+
+	_precision: function() {
+		var precision = this._precisionOf( this.options.step );
+		if ( this.options.min !== null ) {
+			precision = Math.max( precision, this._precisionOf( this.options.min ) );
+		}
+		return precision;
+	},
+
+	_precisionOf: function( num ) {
+		var str = num.toString(),
+			decimal = str.indexOf( "." );
+		return decimal === -1 ? 0 : str.length - decimal - 1;
+	},
+
+	_valueMin: function() {
+		return this.options.min;
+	},
+
+	_valueMax: function() {
+		return this.max;
+	},
+
+	_refreshValue: function() {
+		var lastValPercent, valPercent, value, valueMin, valueMax,
+			oRange = this.options.range,
+			o = this.options,
+			that = this,
+			animate = ( !this._animateOff ) ? o.animate : false,
+			_set = {};
+
+		if ( this.options.values && this.options.values.length ) {
+			this.handles.each(function( i ) {
+				valPercent = ( that.values(i) - that._valueMin() ) / ( that._valueMax() - that._valueMin() ) * 100;
+				_set[ that.orientation === "horizontal" ? "left" : "bottom" ] = valPercent + "%";
+				$( this ).stop( 1, 1 )[ animate ? "animate" : "css" ]( _set, o.animate );
+				if ( that.options.range === true ) {
+					if ( that.orientation === "horizontal" ) {
+						if ( i === 0 ) {
+							that.range.stop( 1, 1 )[ animate ? "animate" : "css" ]( { left: valPercent + "%" }, o.animate );
+						}
+						if ( i === 1 ) {
+							that.range[ animate ? "animate" : "css" ]( { width: ( valPercent - lastValPercent ) + "%" }, { queue: false, duration: o.animate } );
+						}
+					} else {
+						if ( i === 0 ) {
+							that.range.stop( 1, 1 )[ animate ? "animate" : "css" ]( { bottom: ( valPercent ) + "%" }, o.animate );
+						}
+						if ( i === 1 ) {
+							that.range[ animate ? "animate" : "css" ]( { height: ( valPercent - lastValPercent ) + "%" }, { queue: false, duration: o.animate } );
+						}
+					}
+				}
+				lastValPercent = valPercent;
+			});
+		} else {
+			value = this.value();
+			valueMin = this._valueMin();
+			valueMax = this._valueMax();
+			valPercent = ( valueMax !== valueMin ) ?
+					( value - valueMin ) / ( valueMax - valueMin ) * 100 :
+					0;
+			_set[ this.orientation === "horizontal" ? "left" : "bottom" ] = valPercent + "%";
+			this.handle.stop( 1, 1 )[ animate ? "animate" : "css" ]( _set, o.animate );
+
+			if ( oRange === "min" && this.orientation === "horizontal" ) {
+				this.range.stop( 1, 1 )[ animate ? "animate" : "css" ]( { width: valPercent + "%" }, o.animate );
+			}
+			if ( oRange === "max" && this.orientation === "horizontal" ) {
+				this.range[ animate ? "animate" : "css" ]( { width: ( 100 - valPercent ) + "%" }, { queue: false, duration: o.animate } );
+			}
+			if ( oRange === "min" && this.orientation === "vertical" ) {
+				this.range.stop( 1, 1 )[ animate ? "animate" : "css" ]( { height: valPercent + "%" }, o.animate );
+			}
+			if ( oRange === "max" && this.orientation === "vertical" ) {
+				this.range[ animate ? "animate" : "css" ]( { height: ( 100 - valPercent ) + "%" }, { queue: false, duration: o.animate } );
+			}
+		}
+	},
+
+	_handleEvents: {
+		keydown: function( event ) {
+			var allowed, curVal, newVal, step,
+				index = $( event.target ).data( "ui-slider-handle-index" );
+
+			switch ( event.keyCode ) {
+				case $.ui.keyCode.HOME:
+				case $.ui.keyCode.END:
+				case $.ui.keyCode.PAGE_UP:
+				case $.ui.keyCode.PAGE_DOWN:
+				case $.ui.keyCode.UP:
+				case $.ui.keyCode.RIGHT:
+				case $.ui.keyCode.DOWN:
+				case $.ui.keyCode.LEFT:
+					event.preventDefault();
+					if ( !this._keySliding ) {
+						this._keySliding = true;
+						$( event.target ).addClass( "ui-state-active" );
+						allowed = this._start( event, index );
+						if ( allowed === false ) {
+							return;
+						}
+					}
+					break;
+			}
+
+			step = this.options.step;
+			if ( this.options.values && this.options.values.length ) {
+				curVal = newVal = this.values( index );
+			} else {
+				curVal = newVal = this.value();
+			}
+
+			switch ( event.keyCode ) {
+				case $.ui.keyCode.HOME:
+					newVal = this._valueMin();
+					break;
+				case $.ui.keyCode.END:
+					newVal = this._valueMax();
+					break;
+				case $.ui.keyCode.PAGE_UP:
+					newVal = this._trimAlignValue(
+						curVal + ( ( this._valueMax() - this._valueMin() ) / this.numPages )
+					);
+					break;
+				case $.ui.keyCode.PAGE_DOWN:
+					newVal = this._trimAlignValue(
+						curVal - ( (this._valueMax() - this._valueMin()) / this.numPages ) );
+					break;
+				case $.ui.keyCode.UP:
+				case $.ui.keyCode.RIGHT:
+					if ( curVal === this._valueMax() ) {
+						return;
+					}
+					newVal = this._trimAlignValue( curVal + step );
+					break;
+				case $.ui.keyCode.DOWN:
+				case $.ui.keyCode.LEFT:
+					if ( curVal === this._valueMin() ) {
+						return;
+					}
+					newVal = this._trimAlignValue( curVal - step );
+					break;
+			}
+
+			this._slide( event, index, newVal );
+		},
+		keyup: function( event ) {
+			var index = $( event.target ).data( "ui-slider-handle-index" );
+
+			if ( this._keySliding ) {
+				this._keySliding = false;
+				this._stop( event, index );
+				this._change( event, index );
+				$( event.target ).removeClass( "ui-state-active" );
+			}
+		}
+	}
+});
+
+
+
 }));
-
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),(f.L||(f.L={})).Routing=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 function corslite(url, callback, cors) {
     var sent = false;

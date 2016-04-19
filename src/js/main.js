@@ -291,31 +291,31 @@ function schoolMarker(feature) {
   return marker;
 }
 
-function highlightmarker(feature){
-  var highlight = L.MakiMarkers.icon({
-    icon: "college",
-    color: "#de2d26",
-    size: "l"
-  });
-  return highlight;
-}
+var highlight = L.MakiMarkers.icon({
+  icon: "college",
+  color: "#2b8cbe",
+  size: "l"
+});
+
+var defaultmark = L.MakiMarkers.icon({
+  icon: "college",
+  color: "#474747",
+  size: "m"
+});
 
 function highlightFeature(e){
-  var layer = e.target;
-/*
-  icon.setStyle({
-    icon: "college",
-    color: "#de2d26",
-    size: "l"
-  });*/
-  info.update(layer.feature);
+  var marker = e.target;
+  marker.setIcon(highlight);
+  info.update(marker.feature);
+
 }
 
 function resetHighlight(e){
-  var layer = e.target;
+  var marker = e.target;
+  marker.setIcon(defaultmark);
   info.update();
-
 }
+
 function onEachFeature(feature,layer){
   pop_SecondarySchools(feature,layer);
   layer.on({
