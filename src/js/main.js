@@ -423,14 +423,14 @@ function getCoord(postalcode) {
             });
           }
         }).addTo(map);
-        $('#postalCodeResult').html('Postal Code Found');
+        $('#postalCodeResult').html('<i class="fa fa-check-circle" aria-hidden="true"></i> Postal Code Found');
       }
       else {
-          $('#postalCodeResult').html('Postal Code Not Found');
+          $('#postalCodeResult').html('<i class="fa fa-times-circle" aria-hidden="true"></i> Postal Code Not Found');
       }
     })
     .fail(function(err){
-      $('#postalCodeResult').html('<span>Postal Code Error</span>');
+      $('#postalCodeResult').html('<i class="fa fa-times-circle" aria-hidden="true"></i> Postal Code Error');
     });
   });
 }
@@ -589,61 +589,66 @@ $('#inputPostalCode').change(function() {
 });
 
 $('#buttonAHP').click(function() {
-  getCoord($('#inputPostalCode').val());
-  relaRanking = calcWeight();
-  var RankingMatrix = [];
-  var schoolRank = [];
-  //Get inverse distance
-  var oriDist = calcDist(add_hmarker);
-  var distList = inverseArr(oriDist);
-  //Get values
-  valueList = getValues();
-  AcademicList = valueList[0];
-  SportsProgramList = valueList[1];
-  ArtsProgramList = valueList[2];
-  //Factor 1:Academic Excellence
-  AcadeExcelRanking = calcValue(AcademicList);
-  RankingMatrix.push(AcadeExcelRanking);
-  //Factor 2:Sports Programs
-  SporProgRanking = calcValue(SportsProgramList);
-  RankingMatrix.push(SporProgRanking);
-  //Factor 3:Arts Programs
-  ArtProgRanking = calcValue(ArtsProgramList);
-  RankingMatrix.push(ArtProgRanking);
-  //Factor 4:Proximity to home
-  DistRanking = calcValue(distList);
-  RankingMatrix.push(DistRanking);
-  //Factor 5:School Gender
-  SGRanking = calcSG();
-  RankingMatrix.push(SGRanking);
-  //Generate Final Ranking
-  schoolScore = calcAHP(RankingMatrix,relaRanking);
-  var schoolScoreDesc = cloneObject(schoolScore);
-  schoolScoreDesc.sort(function(a,b) { return b - a;});
-  for (i=0;i<schoolScore.length;i++) {
-    for (j=0;j<schoolScoreDesc.length;j++) {
-      if (schoolScore[i] === schoolScoreDesc[j]) {
-        schoolRank.push(j+1); // since rank starts from 1, not 0
+  if ($('#inputPostalCode').val()) {
+    getCoord($('#inputPostalCode').val());
+    $('#ahpWarning').html('');
+    relaRanking = calcWeight();
+    var RankingMatrix = [];
+    var schoolRank = [];
+    //Get inverse distance
+    var oriDist = calcDist(add_hmarker);
+    var distList = inverseArr(oriDist);
+    //Get values
+    valueList = getValues();
+    AcademicList = valueList[0];
+    SportsProgramList = valueList[1];
+    ArtsProgramList = valueList[2];
+    //Factor 1:Academic Excellence
+    AcadeExcelRanking = calcValue(AcademicList);
+    RankingMatrix.push(AcadeExcelRanking);
+    //Factor 2:Sports Programs
+    SporProgRanking = calcValue(SportsProgramList);
+    RankingMatrix.push(SporProgRanking);
+    //Factor 3:Arts Programs
+    ArtProgRanking = calcValue(ArtsProgramList);
+    RankingMatrix.push(ArtProgRanking);
+    //Factor 4:Proximity to home
+    DistRanking = calcValue(distList);
+    RankingMatrix.push(DistRanking);
+    //Factor 5:School Gender
+    SGRanking = calcSG();
+    RankingMatrix.push(SGRanking);
+    //Generate Final Ranking
+    schoolScore = calcAHP(RankingMatrix,relaRanking);
+    var schoolScoreDesc = cloneObject(schoolScore);
+    schoolScoreDesc.sort(function(a,b) { return b - a;});
+    for (i=0;i<schoolScore.length;i++) {
+      for (j=0;j<schoolScoreDesc.length;j++) {
+        if (schoolScore[i] === schoolScoreDesc[j]) {
+          schoolRank.push(j+1); // since rank starts from 1, not 0
+        }
       }
     }
-  }
-  $('#schoolTable').html(originalTable.clone(true,true)); // reset table
-  for (i=0;i<schoolRank.length;i++) {
-    $('#schoolTable tbody tr:nth-child('+(i+1)+')').prepend('<td>'+schoolRank[i]+'</td>');
-    $('#schoolTable tbody tr:nth-child('+(i+1)+')').append('<td>'+ Math.round(oriDist[i]*1000) + '</td>');
-  }
-  sortTableAsc($('#schoolTable'));
-  $('.sidebar-tabs ul li').removeClass('active');
-  $('.sidebar-content div').removeClass('active');
-  $('.sidebar-tabs ul li:first-child').removeClass('disabled');
-  $('.sidebar-tabs ul li:first-child').addClass('active');
-  $('.sidebar-content div:first-child').addClass('active');
-  $('#schoolTable tr td:nth-child(3)').show();
-  $('.sidebar-tabs ul li:first-child').show();
+    $('#schoolTable').html(originalTable.clone(true,true)); // reset table
+    for (i=0;i<schoolRank.length;i++) {
+      $('#schoolTable tbody tr:nth-child('+(i+1)+')').prepend('<td>'+schoolRank[i]+'</td>');
+      $('#schoolTable tbody tr:nth-child('+(i+1)+')').append('<td>'+ Math.round(oriDist[i]*1000) + '</td>');
+    }
+    sortTableAsc($('#schoolTable'));
+    $('.sidebar-tabs ul li').removeClass('active');
+    $('.sidebar-content div').removeClass('active');
+    $('.sidebar-tabs ul li:first-child').removeClass('disabled');
+    $('.sidebar-tabs ul li:first-child').addClass('active');
+    $('.sidebar-content div:first-child').addClass('active');
+    $('#schoolTable tr td:nth-child(3)').show();
+    $('.sidebar-tabs ul li:first-child').show();
 
-  $('#schoolTable tbody tr').append('<td>?</td>');
-  calcSuccess();
-  boldTableResult();
+    $('#schoolTable tbody tr').append('<td>?</td>');
+    calcSuccess();
+    boldTableResult();
+  } else {
+    $('#ahpWarning').html('Postal Code Error');
+  }
 });
 
 // Stream Input

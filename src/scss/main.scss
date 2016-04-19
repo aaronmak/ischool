@@ -16,6 +16,9 @@
 
 $blue: #0074d9;
 $dark-blue: darken($blue,10%);
+$red: #d90007;
+$green: #00d965;
+
 body {
     padding: 0;
     margin: 0;
@@ -190,4 +193,24 @@ h1.sidebar-header {
 
 .leaflet-routing-container-hide, .leaflet-routing-container  {
   display: none;
+}
+
+.warning {
+  color: $red;
+}
+
+.fa-times-circle {
+  color: $red;
+}
+
+.fa-check-circle {
+  color: $green;
+}
+
+#postalCodeResult {
+  font-size: 1.4rem;
+  margin-left: 5px;
+  .fa {
+    margin: 5px;
+  }
 }
