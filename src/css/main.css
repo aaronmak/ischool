@@ -142,4 +142,19 @@ h1.sidebar-header {
 .leaflet-routing-container-hide, .leaflet-routing-container {
   display: none; }
 
+.warning {
+  color: #d90007; }
+
+.fa-times-circle {
+  color: #d90007; }
+
+.fa-check-circle {
+  color: #00d965; }
+
+#postalCodeResult {
+  font-size: 1.4rem;
+  margin-left: 5px; }
+  #postalCodeResult .fa {
+    margin: 5px; }
+
 /*# sourceMappingURL=main.css.map */
