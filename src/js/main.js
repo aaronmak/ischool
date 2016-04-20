@@ -94,6 +94,11 @@ var sidebar = L.control.sidebar('sidebar-control', {
 
 map.addControl(sidebar);
 
+window.onload = function(){
+  $('#sidebar-control').removeClass('collapsed');
+  $('.sidebar-tabs ul li:nth-child(2)').addClass('active');
+  $('.sidebar-content div:nth-child(2)').addClass('active');
+};
 
 
 //////Control for school point
