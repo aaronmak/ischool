@@ -160,13 +160,6 @@ html {
   font-size: 10px;
   -webkit-tap-highlight-color: transparent; }
 
-body {
-  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
-  font-size: 14px;
-  line-height: 1.42857143;
-  color: #333;
-  background-color: #fff; }
-
 input, button, select, textarea {
   font-family: inherit;
   font-size: inherit;
@@ -1004,5 +997,15 @@ div.popover.tourist-popover.top {
     font-weight: 700;
     border: none;
     background: #0059a6; }
+
+#schoolTable {
+  font-size: 1.5rem;
+  line-height: 1.6;
+  font-weight: 400;
+  font-family: Raleway, HelveticaNeue, Helvetica Neue, Helvetica, Arial, sans-serif;
+  color: #222;
+  margin-top: 20px; }
+  #schoolTable td, #schoolTable th {
+    padding: 9px; }
 
 /*# sourceMappingURL=main.css.map */
