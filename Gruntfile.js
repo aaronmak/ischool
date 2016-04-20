@@ -26,7 +26,8 @@ module.exports = function (grunt) {
             'css': 'src/css/bower.css'
           },
           dependencies: {
-            'jquery-sidebar': 'jquery'
+            'jquery-sidebar': 'jquery',
+            'tourist': 'backbone'
           },
           bowerOptions: {
             relative: false
