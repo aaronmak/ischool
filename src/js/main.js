@@ -1,5 +1,4 @@
 // Utilities
-
 Object.size = function(obj) {
     var size = 0, key;
     for (key in obj) {
@@ -94,6 +93,11 @@ var sidebar = L.control.sidebar('sidebar-control', {
 
 map.addControl(sidebar);
 
+window.onload = function(){
+  $('#sidebar-control').removeClass('collapsed');
+  $('.sidebar-tabs ul li:nth-child(2)').addClass('active');
+  $('.sidebar-content div:nth-child(2)').addClass('active');
+};
 
 
 //////Control for school point
@@ -726,4 +730,35 @@ function boldTableResult() {
 }
 
 ///// Intro JS
-introJs.start();
+var steps = [{
+  content: '<p>Fill this up with your postal code first.</p>',
+  highlightTarget: true,
+  nextButton: true,
+  target: $('#inputPostalCode'),
+  my: 'bottom center',
+  at: 'right center'
+}, {
+  content: '<p>Next, choose your preferred school gender.</p>',
+  highlightTarget: true,
+  nextButton: true,
+  target: $('#prefGen'),
+  my: 'bottom center',
+  at: 'right center'
+},{
+  content: '<p>Shift the sliders towards the factors that are more important to you.</p>',
+  highlightTarget: true,
+  nextButton: true,
+  target: $('#sliders'),
+  my: 'bottom center',
+  at: 'top center'
+}];
+
+var tour = new Tourist.Tour({
+  steps: steps,
+  tipClass: 'Bootstrap',
+  tipOptions:{ showEffect: 'slidein' }
+});
+
+$('#ahpHelp').click(function() {
+  tour.start();
+});
