@@ -403,39 +403,36 @@ function homeMarker(feature) {
 
 function getCoord(postalcode) {
   if (add_hmarker) {map.removeLayer(add_hmarker);} // to remove old marker
-  var getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=j6/Rfby70oVeYjQxxA2ZsgGpk+VKBUyP6mhmDVQmu+NQVW0ylJG6K0/MgUI8B49FH0A0Fs7Nb5Nb/2PcjolCcwNGytg/J27TSXxrkWgeAqYM0qi2ManejNlLmtuP6c/g|mv73ZvjFcSo=';
-  if (document.location.hostname == "localhost") {
-    getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=xkg8VRu6Ol+gMH+SUamkRIEB7fKzhwMvfMo/2U8UJcFhdvR4yN1GutmUIA3A6r3LDhot215OVVkZvNRzjl28TNUZgYFSswOi';
-  }
-  var token = '';
-  console.log('getTokenURL: ' + getTokenURL);
-  $.getJSON(getTokenURL)
-  .done(function(data){
-    token = data.GetToken[0].NewToken;
-    var url = 'http://www.onemap.sg/APIV2/services.svc/basicSearchV2?token='+token+'&searchVal='+postalcode+'&otptFlds=SEARCHVAL,CATEGORY&returnGeom=0&rset=1&projSys=WGS84';
-    $.getJSON(url)
-    .done(function(data) {
-      if (data.SearchResults.length === 2) {
-        var xCoord = parseFloat(data.SearchResults[1].X);
-        var yCoord = parseFloat(data.SearchResults[1].Y);
-        homeCoord = [xCoord,yCoord];
-        homePoint.features[0].geometry.coordinates = homeCoord;
-        add_hmarker = L.geoJson(homePoint, {
-          pointToLayer: function(feature, latlng) {
-            return L.marker(latlng, {
-              icon: homeMarker(feature)
-            });
-          }
-        }).addTo(map);
-        $('#postalCodeResult').html('<i class="fa fa-check-circle" aria-hidden="true"></i> Postal Code Found');
-      }
-      else {
-          $('#postalCodeResult').html('<i class="fa fa-times-circle" aria-hidden="true"></i> Postal Code Not Found');
-      }
-    })
-    .fail(function(err){
-      $('#postalCodeResult').html('<i class="fa fa-times-circle" aria-hidden="true"></i> Postal Code Error');
-    });
+  // var getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=j6/Rfby70oVeYjQxxA2ZsgGpk+VKBUyP6mhmDVQmu+NQVW0ylJG6K0/MgUI8B49FH0A0Fs7Nb5Nb/2PcjolCcwNGytg/J27TSXxrkWgeAqYM0qi2ManejNlLmtuP6c/g|mv73ZvjFcSo=';
+  // if (document.location.hostname == "localhost") {
+  //   getTokenURL = 'http://www.onemap.sg/API/services.svc/getToken?accessKEY=xkg8VRu6Ol+gMH+SUamkRIEB7fKzhwMvfMo/2U8UJcFhdvR4yN1GutmUIA3A6r3LDhot215OVVkZvNRzjl28TNUZgYFSswOi';
+  // }
+  // var token = '';
+  // console.log('getTokenURL: ' + getTokenURL);
+  // token = data.GetToken[0].NewToken;
+  var url = 'https://developers.onemap.sg/commonapi/search?searchVal='+postalcode+'&returnGeom=Y&getAddrDetails=Y&pageNum=1';
+  $.getJSON(url)
+  .done(function(data) {
+    if (data.results.length > 0) {
+      var xCoord = parseFloat(data.results[0].X);
+      var yCoord = parseFloat(data.results[0].Y);
+      homeCoord = [xCoord,yCoord];
+      homePoint.features[0].geometry.coordinates = homeCoord;
+      add_hmarker = L.geoJson(homePoint, {
+        pointToLayer: function(feature, latlng) {
+          return L.marker(latlng, {
+            icon: homeMarker(feature)
+          });
+        }
+      }).addTo(map);
+      $('#postalCodeResult').html('<i class="fa fa-check-circle" aria-hidden="true"></i> Postal Code Found');
+    }
+    else {
+        $('#postalCodeResult').html('<i class="fa fa-times-circle" aria-hidden="true"></i> Postal Code Not Found');
+    }
+  })
+  .fail(function(err){
+    $('#postalCodeResult').html('<i class="fa fa-times-circle" aria-hidden="true"></i> Postal Code Error');
   });
 }
 
