@@ -1,0 +1,45 @@
+{
+  "name": "ischool",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/aaronmak/ischool.git"
+  },
+  "author": "Aaron Mak",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/aaronmak/ischool/issues"
+  },
+  "homepage": "https://github.com/aaronmak/ischool",
+  "devDependencies": {
+    "autoprefixer": "^6.3.3",
+    "cssnano": "^3.5.2",
+    "grunt": "^0.4.5",
+    "grunt-bower-concat": "^1.0.0",
+    "grunt-bower-sync": "^1.0.1",
+    "grunt-browser-sync": "^2.2.0",
+    "grunt-contrib-concat": "^1.0.0",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-contrib-cssmin": "^1.0.0",
+    "grunt-contrib-jshint": "^1.0.0",
+    "grunt-contrib-qunit": "^1.0.1",
+    "grunt-contrib-sass": "^1.0.0",
+    "grunt-contrib-uglify": "^1.0.0",
+    "grunt-contrib-watch": "^0.6.1",
+    "grunt-cssnano": "^2.0.1",
+    "grunt-gh-pages": "^1.1.0",
+    "grunt-open": "^0.2.3",
+    "grunt-postcss": "^0.8.0",
+    "gulp-cssnano": "^2.1.1",
+    "matchdep": "^1.0.1"
+  },
+  "dependencies": {
+    "bower-json": "^0.8.1",
+    "es6-promise": "^3.1.2"
+  }
+}
